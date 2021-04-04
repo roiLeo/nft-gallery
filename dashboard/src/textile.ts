@@ -5,6 +5,6 @@ export async function client(): Promise<Client> {
 }
 
 export const keyInfo: KeyInfo = {
-  key: 'bt7vvbal3bl675lt75emfsjzgqi',
+  key: 'bdyjjn63dopm5k2m2jovz6jqzwy',
   secret: process.env.VUE_APP_TEXTILE_SECRET
 }
