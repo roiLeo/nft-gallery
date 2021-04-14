@@ -27,6 +27,7 @@
     "@polkadot/wasm-crypto": "^4.0.2",
     "@polkadot/wasm-crypto-wasm": "^4.0.2",
     "@polkadot/x-randomvalues": "^6.0.5",
+    "@subsocial/api": "^0.4.37",
     "@textile/hub": "^6.0.1",
     "@types/file-saver": "^2.0.1",
     "@vue-polkadot/vue-api": "^0.0.28",
