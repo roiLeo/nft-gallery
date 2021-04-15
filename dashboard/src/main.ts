@@ -15,6 +15,7 @@ import router from './router';
 
 import MetaInfo from 'vue-meta';
 import AudioVisual from 'vue-audio-visual'
+import { resolveSubsocialApi  } from '@/components/subsocial/subsocial'
 
 Vue.use(MetaInfo)
 Vue.use(AudioVisual)
@@ -50,6 +51,7 @@ Vue.filter('shortAddress', shortAddress);
 (window as any).mingo = mingo;
 (window as any).api = api;
 (window as any).P = { baseIpfsPrice, cost, getFileSize, supportTx};
+(window as any).SS = resolveSubsocialApi;
 // (window as any).migrateCollection = migrateCollection;
 // (window as any).migrateNFT = migrateNFT;
 

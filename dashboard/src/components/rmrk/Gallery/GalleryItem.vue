@@ -72,6 +72,7 @@
             <Sharing />
           </template>
         </div>
+        <Comment />
       </div>
     </div>
   </div>
@@ -135,7 +136,8 @@ type NFTType =  NFTWithMeta;
     Sharing,
     Appreciation: () => import('./Appreciation.vue'),
     MediaResolver: () => import('../Media/MediaResolver.vue'),
-    PackSaver: () => import('../Pack/PackSaver.vue')
+    PackSaver: () => import('../Pack/PackSaver.vue'),
+    Comment: () => import('@/components/subsocial/Comment.vue')
   }
 })
 export default class GalleryItem extends Vue {
