@@ -35,7 +35,10 @@ const components = {
   Identity: () => import('@/components/shared/format/Identity.vue')
 };
 
-@Component({ components })
+@Component({
+  name: 'Comment',
+  components
+})
 export default class Comment extends Vue {
   @Prop({ default: '' }) public message!: any;
   @Prop({ default: 'Fksmad33PFxhrQXNYPPJozgWrv82zuFLvXK7Rh8m1xQhe98' })

@@ -1,8 +1,8 @@
 <template>
   <div>
-    <b-button type="is-link is-light" @click="commentsVisible = true" >{{ $t('subscan.showComments') }} {{ comments.length }}</b-button>
-    <template v-if="commentsVisible">
-      <Comment v-for="(comment, i) in comments" :key="i" :comment="comment"/>
+    <b-button v-if="!commentsVisible && !nested" type="is-link is-light" @click="commentsVisible = true" >{{ $t('subscan.showComments') }} {{ comments.length }}</b-button>
+    <template v-else>
+      <CommentAdapter v-for="(comment, i) in comments" :key="i" :comment="comment"/>
     </template>
   </div>
 </template>
@@ -15,12 +15,16 @@ import BN from 'bn.js';
 import { findCommentsForPost } from './utils'
 
 const components = {
-  Comment: () => import('./CommentAdapter.vue')
+  CommentAdapter: () => import('./CommentAdapter.vue')
 }
 
-@Component({ components })
+@Component({
+  name: 'CommentWrapper',
+  components
+})
 export default class CommentWrapper extends Vue {
   @Prop() public postId!: string;
+  @Prop(Boolean) public nested!: boolean;
   protected comments: PostType[] = [];
   protected commentsVisible: boolean = false;
   protected loading: boolean = false;

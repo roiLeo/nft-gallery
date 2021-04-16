@@ -73,8 +73,8 @@
           </template>
         </div>
         <CommentWrapper postId="14659" />
-        <Comment />
-        <Comment />
+        <!-- <Comment /> -->
+        <!-- <Comment /> -->
       </div>
     </div>
   </div>
