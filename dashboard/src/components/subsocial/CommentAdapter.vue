@@ -1,6 +1,7 @@
 <template>
   <div v-if="comment">
-    <Comment v-if="account" :message="message" :account="account"  />
+    <Comment v-if="account" :message="message" :account="account" :postId="postId" v-model="replyVisible" />
+    <div v-if="replyVisible">replyVisible</div>
     <CommentWrapper v-if="postId" class="comment-adapter__nested" :postId="postId" nested />
   </div>
 </template>
@@ -21,6 +22,7 @@ const components = {
 export default class CommentAdapter extends Vue {
   @Prop() public comment!: PostType;
   protected postId: string = '';
+  protected replyVisible: boolean = false;
 
   get message() {
     return this.comment?.content?.body

@@ -23,7 +23,7 @@
           <div class="level-left">
             <b-icon pack="far" icon="thumbs-up" size="is-small" class="level-item comment-action"></b-icon>
             <b-icon pack="far" icon="thumbs-down" size="is-small" class="level-item comment-action"> </b-icon>
-            <b-icon icon="reply" size="is-small" class="level-item comment-action"> </b-icon>
+            <b-icon @click.native="handleReplyVisibility" icon="reply" size="is-small" class="level-item comment-action"> </b-icon>
           </div>
         </nav>
       </div>
@@ -34,10 +34,14 @@
 <script lang="ts" >
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
 import { findProfile } from './utils';
-import { ProfileContentType } from './types'
+import { ProfileContentType, ReactionKind } from './types'
 import { ipfsHashToUrl } from '@/components/rmrk/utils';
 import { emptyObject } from '@/utils/empty';
 import { formatAccount } from '@/utils/account';
+import { resolveSubsocialApi } from './subsocial';
+import exec, { execResultValue } from '@/utils/transactionExecutor';
+import { notificationTypes, showNotification } from '@/utils/notification';
+
 
 const components = {
   Avatar: () => import('@/components/shared/Avatar.vue'),
@@ -50,7 +54,9 @@ const components = {
   components
 })
 export default class Comment extends Vue {
+  @Prop(Boolean) public value!: boolean;
   @Prop({ default: '' }) public message!: any;
+  @Prop({ default: '' }) public postId!: string;
   @Prop({ default: '' })
   public account!: string;
   public profile: ProfileContentType = emptyObject<ProfileContentType>();
@@ -78,6 +84,51 @@ export default class Comment extends Vue {
       if (profile) {
         this.profile = profile
       }
+    }
+  }
+
+
+  protected handleReplyVisibility() {
+    console.log(`this.$emit('input', !this.value)`, this.value);
+
+    this.$emit('input', !this.value)
+  }
+
+  protected async handleLike() {
+    this.submitReaction('Upvote')
+    // try {
+    //   const cb = (await ss.substrate.api).tx.posts.createPost
+
+    // } catch (e)
+
+
+  }
+
+  protected handleDislike() {
+    this.submitReaction('Downvote')
+  }
+
+  get accountId() {
+    return this.$store.getters.getAuthAddress;
+  }
+
+  protected async submitReaction(reaction: ReactionKind) {
+    const ss = await resolveSubsocialApi();
+    if (!this.postId) {
+      showNotification('No postId for Item!', notificationTypes.warn);
+      return
+    }
+
+    try {
+      showNotification('Dispatched');
+      const cb = (await ss.substrate.api).tx.reactions.createPostReaction
+      const arg = reaction
+      const tx = await exec(this.address, '', cb, [this.postId, arg]);
+      showNotification(execResultValue(tx), notificationTypes.success);
+
+    } catch (e) {
+      console.warn(`[SUBSOCIAL] Unable to react ${1} with reaction ${reaction},\nREASON: ${e}`)
+      showNotification(e.message, notificationTypes.danger);
     }
   }
 }
