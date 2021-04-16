@@ -1,7 +1,7 @@
 <template>
   <div v-if="comment">
     <Comment v-if="account" :message="message" :account="account" :postId="postId" v-model="replyVisible" />
-    <div v-if="replyVisible">replyVisible</div>
+    <Reply class="comment-adapter__nested" v-if="replyVisible" :postId="postId" />
     <CommentWrapper v-if="postId" class="comment-adapter__nested" :postId="postId" nested />
   </div>
 </template>
@@ -12,7 +12,8 @@ import { PostType } from './types'
 
 const components = {
   Comment: () => import('./Comment.vue'),
-  CommentWrapper: () => import('./CommentWrapper.vue')
+  CommentWrapper: () => import('./CommentWrapper.vue'),
+  Reply: () => import('./Reply.vue'),
 }
 
 @Component({
