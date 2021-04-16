@@ -10,7 +10,7 @@
         <div class="content">
           <p>
             <strong><Identity :address="account" :inline="true"/></strong>
-            <small>@johnsmith</small>
+            <small>@dateHere</small>
             <br />
             {{ message }}
           </p>
@@ -20,13 +20,6 @@
             <b-icon pack="far" icon="thumbs-up" size="is-small" class="level-item"></b-icon>
             <b-icon pack="far" icon="thumbs-down" size="is-small" class="level-item"> </b-icon>
             <b-icon icon="reply" size="is-small" class="level-item"> </b-icon>
-            <b-icon
-              pack="fab"
-              icon="twitter"
-              size="is-small"
-              class="level-item"
-            >
-            </b-icon>
           </div>
         </nav>
       </div>
@@ -44,7 +37,7 @@ const components = {
 
 @Component({ components })
 export default class Comment extends Vue {
-  @Prop({ default: 'Test message' }) public message!: any;
+  @Prop({ default: '' }) public message!: any;
   @Prop({ default: 'Fksmad33PFxhrQXNYPPJozgWrv82zuFLvXK7Rh8m1xQhe98' })
   public account!: string;
 }
