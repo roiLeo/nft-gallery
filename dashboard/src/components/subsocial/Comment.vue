@@ -3,14 +3,15 @@
     <article class="media">
       <div class="media-left">
         <figure class="image is-64x64">
-          <Avatar :value="account" :size="64" />
+          <img v-if="avatar" class="is-rounded" :src="avatar">
+          <Avatar v-else :value="account" :size="64" />
         </figure>
       </div>
       <div class="media-content">
         <div class="content">
           <p>
             <strong><Identity :address="account" :inline="true"/></strong>
-            <small>@dateHere</small>
+            <small>@{{ handle }}</small>
             <br />
             {{ message }}
           </p>
@@ -29,6 +30,9 @@
 
 <script lang="ts" >
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
+import { findProfile } from './utils';
+import { ProfileContentType } from './types'
+import { ipfsHashToUrl } from '@/components/rmrk/utils';
 
 const components = {
   Avatar: () => import('@/components/shared/Avatar.vue'),
@@ -41,7 +45,29 @@ const components = {
 })
 export default class Comment extends Vue {
   @Prop({ default: '' }) public message!: any;
-  @Prop({ default: 'Fksmad33PFxhrQXNYPPJozgWrv82zuFLvXK7Rh8m1xQhe98' })
+  @Prop({ default: '' })
   public account!: string;
+  public profile: ProfileContentType = undefined;
+
+  get hasProfile() {
+    return this.profile
+  }
+
+  get handle() {
+    return this.profile?.avatar
+  }
+
+  get avatar() {
+    return ipfsHashToUrl(this.profile?.avatar)
+  }
+
+  public async mounted() {
+    if (this.account) {
+      const profile = await findProfile(this.account)
+      console.log(profile, 'profile');
+
+      this.profile = profile
+    }
+  }
 }
 </script>
