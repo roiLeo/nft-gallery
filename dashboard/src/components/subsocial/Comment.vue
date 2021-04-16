@@ -21,8 +21,8 @@
         </div>
         <nav class="level is-mobile">
           <div class="level-left">
-            <b-icon pack="far" icon="thumbs-up" size="is-small" class="level-item comment-action"></b-icon>
-            <b-icon pack="far" icon="thumbs-down" size="is-small" class="level-item comment-action"> </b-icon>
+            <b-icon @click.native="handleLike" pack="far" icon="thumbs-up" size="is-small" class="level-item comment-action"></b-icon>
+            <b-icon @click.native="handleDislike" pack="far" icon="thumbs-down" size="is-small" class="level-item comment-action"> </b-icon>
             <b-icon @click.native="handleReplyVisibility" icon="reply" size="is-small" class="level-item comment-action"> </b-icon>
           </div>
         </nav>
@@ -33,7 +33,7 @@
 
 <script lang="ts" >
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
-import { findProfile } from './utils';
+import { findProfile, subsocialAddress } from './utils';
 import { ProfileContentType, ReactionKind } from './types'
 import { ipfsHashToUrl } from '@/components/rmrk/utils';
 import { emptyObject } from '@/utils/empty';
@@ -77,6 +77,10 @@ export default class Comment extends Vue {
     return ipfsHashToUrl(this.profile?.avatar)
   }
 
+  get accountId() {
+    return this.$store.getters.getAuthAddress;
+  }
+
   public async mounted() {
     if (this.account) {
       const profile = await findProfile(this.account)
@@ -108,9 +112,7 @@ export default class Comment extends Vue {
     this.submitReaction('Downvote')
   }
 
-  get accountId() {
-    return this.$store.getters.getAuthAddress;
-  }
+
 
   protected async submitReaction(reaction: ReactionKind) {
     const ss = await resolveSubsocialApi();
@@ -123,7 +125,7 @@ export default class Comment extends Vue {
       showNotification('Dispatched');
       const cb = (await ss.substrate.api).tx.reactions.createPostReaction
       const arg = reaction
-      const tx = await exec(this.address, '', cb, [this.postId, arg]);
+      const tx = await exec(subsocialAddress(this.accountId), '', cb, [this.postId, arg]);
       showNotification(execResultValue(tx), notificationTypes.success);
 
     } catch (e) {

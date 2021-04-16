@@ -1,6 +1,7 @@
 import { resolveSubsocialApi } from './subsocial';
 import BN from 'bn.js';
 import { OptionalProfileContent } from './types'
+import { formatAccount } from '@/utils/account';
 export const SUBSOCIAL_SS58 = 28;
 
 export const findCommentsForPost =  async (postId: string) => {
@@ -15,3 +16,5 @@ export const findProfile =  async (account: string): Promise<OptionalProfileCont
   const profile = await ss.findProfile(account)
   return profile?.content
 }
+
+export const subsocialAddress = (accountId: string) => formatAccount(accountId, SUBSOCIAL_SS58)
