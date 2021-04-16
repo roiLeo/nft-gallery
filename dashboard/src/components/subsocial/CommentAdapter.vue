@@ -42,7 +42,7 @@ export default class CommentAdapter extends Vue {
 
 <style>
 .comment-adapter__nested {
-  margin-left: 44px;
+  margin-left: 2.5rem;
 }
 
 .box:last-child {

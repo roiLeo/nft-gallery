@@ -6,5 +6,6 @@ export type Optional<T> = T | undefined;
 
 export type PostType = Optional<CommonData<Post, PostContent>>
 
-export type ProfileContentType = ProfileContent | undefined
+export type ProfileContentType = ProfileContent
 
+export type OptionalProfileContent = Optional<ProfileContent>

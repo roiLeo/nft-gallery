@@ -1,6 +1,7 @@
 import { resolveSubsocialApi } from './subsocial';
 import BN from 'bn.js';
-import { ProfileContentType } from './types'
+import { OptionalProfileContent } from './types'
+export const SUBSOCIAL_SS58 = 28;
 
 export const findCommentsForPost =  async (postId: string) => {
   const ss = await resolveSubsocialApi();
@@ -9,8 +10,7 @@ export const findCommentsForPost =  async (postId: string) => {
   return await Promise.all(commentPromises);
 }
 
-
-export const findProfile =  async (account: string): Promise<ProfileContentType> => {
+export const findProfile =  async (account: string): Promise<OptionalProfileContent> => {
   const ss = await resolveSubsocialApi();
   const profile = await ss.findProfile(account)
   return profile?.content
