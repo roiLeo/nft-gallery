@@ -34,13 +34,14 @@
 <script lang="ts" >
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
 import { findProfile, subsocialAddress } from './utils';
-import { ProfileContentType, ReactionKind } from './types'
+import { ProfileContentType, ReactionType } from './types'
 import { ipfsHashToUrl } from '@/components/rmrk/utils';
 import { emptyObject } from '@/utils/empty';
 import { formatAccount } from '@/utils/account';
 import { resolveSubsocialApi } from './subsocial';
 import exec, { execResultValue } from '@/utils/transactionExecutor';
 import { notificationTypes, showNotification } from '@/utils/notification';
+import { ReactionKind } from '@subsocial/types/substrate/classes'
 
 
 const components = {
@@ -114,7 +115,7 @@ export default class Comment extends Vue {
 
 
 
-  protected async submitReaction(reaction: ReactionKind) {
+  protected async submitReaction(reaction: ReactionType) {
     const ss = await resolveSubsocialApi();
     if (!this.postId) {
       showNotification('No postId for Item!', notificationTypes.warn);
@@ -124,7 +125,7 @@ export default class Comment extends Vue {
     try {
       showNotification('Dispatched');
       const cb = (await ss.substrate.api).tx.reactions.createPostReaction
-      const arg = reaction
+      const arg = new ReactionKind(reaction)
       const tx = await exec(subsocialAddress(this.accountId), '', cb, [this.postId, arg]);
       showNotification(execResultValue(tx), notificationTypes.success);
 

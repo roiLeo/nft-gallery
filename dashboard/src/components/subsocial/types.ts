@@ -10,4 +10,4 @@ export type ProfileContentType = ProfileContent
 
 export type OptionalProfileContent = Optional<ProfileContent>
 
-export type ReactionKind = 'Upvote' | 'Downvote'
+export type ReactionType = 'Upvote' | 'Downvote'
