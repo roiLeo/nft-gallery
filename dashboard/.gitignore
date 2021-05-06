@@ -1,7 +1,10 @@
 .DS_Store
 node_modules
-/dist
+dashboard/dist
+dist
+functions/
 yarn.lock
+
 package-lock.json
 # local env files
 .env.local
@@ -20,6 +23,9 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
-
+.netlify
 .vercel
 /test
+
+# Local Netlify folder
+.netlify

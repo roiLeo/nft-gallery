@@ -16,9 +16,11 @@ import router from './router';
 import MetaInfo from 'vue-meta';
 import AudioVisual from 'vue-audio-visual'
 import { resolveSubsocialApi  } from '@/components/subsocial/subsocial'
+import VueSocialSharing from 'vue-social-sharing'
 
 Vue.use(MetaInfo)
 Vue.use(AudioVisual)
+Vue.use(VueSocialSharing)
 import Connector from '@vue-polkadot/vue-api';
 import { client, keyInfo } from '@/textile'
 import { createInstance, getInstance, migrateCollection, migrateNFT } from '@/components/rmrk/service/RmrkService'
@@ -30,6 +32,7 @@ import i18n from './i18n'
 import mingo from 'mingo'
 import api from './fetch'
 import { baseIpfsPrice, cost,  getFileSize, supportTx } from './utils/support'
+import axios from 'axios'
 
 
 import { useOperators, OperatorType } from 'mingo/core'

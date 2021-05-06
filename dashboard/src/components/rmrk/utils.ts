@@ -10,20 +10,20 @@ import {
 } from './types';
 import api from '@/fetch';
 import { RmrkType, RmrkWithMetaType, CollectionOrNFT } from './service/RmrkService';
-import { NFTMetadata, Collection, PackMetadata, NFT } from './service/scheme';
-import { justHash } from '@/pinata';
+import { justHash } from '@/utils/ipfs';
+import { NFTMetadata, Collection, PackMetadata, NFT, NFTWithMeta } from './service/scheme';
 
 export const SQUARE = '::'
 export const DEFAULT_IPFS_PROVIDER = 'https://ipfs.io/';
 
-export type ProviderKeyType = 'pinata' | 'cloudflare' | 'ipfs' | 'dweb' | ''
+export type ProviderKeyType = 'pinata' | 'cloudflare' | 'ipfs' | 'dweb' | 'kodadot'
 
 export const ipfsProviders: Record<ProviderKeyType, string> = {
   pinata: 'https://gateway.pinata.cloud/',
   cloudflare: 'https://cloudflare-ipfs.com/',
   ipfs: DEFAULT_IPFS_PROVIDER,
   dweb: 'https://dweb.link/',
-  '': 'https://gateway.pinata.cloud/'
+  kodadot: 'https://kodadot.mypinata.cloud/',
 }
 
 export const ipfsHashToUrl = (ipfsHash?: string, provider?: ProviderKeyType) => {
@@ -34,7 +34,7 @@ export const ipfsHashToUrl = (ipfsHash?: string, provider?: ProviderKeyType) => 
   return ipfsHash
 }
 
-const resolveProvider = (key?: ProviderKeyType) => ipfsProviders[key || '']
+const resolveProvider = (key: ProviderKeyType = 'kodadot') => ipfsProviders[key]
 
 export const zip = <T1, T2, T3>(a: T1[], b: T2[], cb?: (el: (T1 | T2)[]) => T3): T3[] | (T1 | T2)[][] => {
   const res = a.map((k, i) => [k, b[i]]);
@@ -123,6 +123,10 @@ export function sanitizeObjectArray<T extends RmrkWithMetaType>(instances: T[], 
   return instances.map(i => sanitizeImage(i, provider))
 }
 
+export function mapPriceToNumber(instances: NFTWithMeta[], provider?: ProviderKeyType): any[] {
+  return instances.map(i => ({...i, price: Number(i.price || 0)}))
+}
+
 export const decodeRmrkString = (rmrkString: string): RMRK => {
   const value = decode(
     isHex(rmrkString) ? hexToString(rmrkString) : rmrkString
@@ -199,7 +203,7 @@ export const equals = (first: RMRK, second: RMRK): boolean => {
   return true;
 };
 
-export const resolveMedia = (mimeType: string): MediaType => {
+export const resolveMedia = (mimeType?: string): MediaType => {
   if (!mimeType) {
     return MediaType.UNKNOWN;
   }
