@@ -36,7 +36,7 @@ export default class Reply extends Vue {
       showNotification('Dispatched');
         const cb = (await ss.substrate.api).tx.posts.createPost
       const arg = this.message
-      const tx = await exec(subsocialAddress(this.accountId), '', cb, [this.postId, arg]);
+      const tx = await exec(subsocialAddress(this.accountId), '', cb as any, [this.postId, arg]);
       showNotification(execResultValue(tx), notificationTypes.success);
 
     } catch (e) {
