@@ -1,6 +1,6 @@
-import { SubsocialIpfsApi } from '@subsocial/api/ipfs'
-import { SubsocialApi } from '@subsocial/api/subsocial'
-import { SubsocialSubstrateApi } from '@subsocial/api/substrate'
+import { SubsocialIpfsApi } from '@subsocial/api/api/ipfs'
+import { SubsocialApi } from '@subsocial/api/api/subsocial'
+import { SubsocialSubstrateApi } from '@subsocial/api/api/substrate'
 import { Api } from '@subsocial/api/substrateConnect'
 import { ipfsConfig } from './ipfsConfig'
 
