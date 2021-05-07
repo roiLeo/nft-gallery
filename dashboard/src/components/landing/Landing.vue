@@ -93,8 +93,15 @@
                   </h2>
                   <h2 class="title">
                     <b-icon icon="leaf"></b-icon>
-                    Low carbon NFT platform running on
-                    <a href="https://kusama.network">Kusama.network</a> - NPoS
+                    <router-link :to="{ name: 'carbonless'}">
+                      Carbonless NFT movement
+                    </router-link>
+                  </h2>
+                  <h2 class="title">
+                    <b-icon icon="leaf"></b-icon>
+                    <router-link :to="{ name: 'sustainability'}">
+                      Sustainability program
+                    </router-link>
                   </h2>
                 </div>
                 <div class="tile is-child">
@@ -126,21 +133,39 @@
                   </a>
                 </h2>
                 <h2 class="title">
-                  <a href="https://twitter.com/KodaDot" target="_blank">
-                    <b-icon
-                      pack="fab"
-                      icon="twitter">
-                    </b-icon>
-                    KodaDot
-                  </a>
-                </h2>
-                <h2 class="title">
                   <a href="https://www.reddit.com/r/KodaDot/" target="_blank">
                     <b-icon
                       pack="fab"
                       icon="reddit-alien">
                     </b-icon>
                     r/KodaDot
+                  </a>
+                </h2>
+                <h2 class="title">
+                  <a href="https://twitter.com/KodaDot" target="_blank">
+                    <b-icon
+                      pack="fab"
+                      icon="twitter">
+                    </b-icon>
+                    @KodaDot
+                  </a>
+                </h2>
+
+                <h2 class="title">
+                  <a href="https://calendar.google.com/calendar/u/0/embed?src=c_eu96e3mq6ov7oj0eaadgbbvjvk@group.calendar.google.com" target="_blank">
+                    <b-icon
+                      icon="calendar">
+                    </b-icon>
+                    {{ $t('Community Events') }}
+                  </a>
+                </h2>
+                <h2 class="title">
+                  <a href="https://twitter.com/metaprime_net" target="_blank">
+                    <b-icon
+                      pack="fab"
+                      icon="twitter">
+                    </b-icon>
+                    {{ $t('Building on @Metaprime_net') }}
                   </a>
                 </h2>
                 <h2 class="title">
@@ -163,6 +188,7 @@
                 </h2>
                 </div>
               </div>
+
           </div>
         </div>
       </div>
@@ -194,11 +220,12 @@ export default class Landing extends Vue {
   public creators: any = [
     'Dx6nVUy6f2znn4ZwNZ3TGbEyUz3FLbCRGQGKAut4LxjCVRs',
     'J6mwrrDE5ZywDe8T4mWgsdgHCcrDcrVtoGh37i7PSaZARRs',
+    'FqCJeGcPidYSsvvmT17fHVaYdE2nXMYgPsBn3CP9gugvZR5',
     'DmUVjSi8id22vcH26btyVsVq39p8EVPiepdBEYhzoLL8Qby',
     'CxQJNQeowRUJBgUHQpspudWy4BU6Rk2u93yDZEKe6GzcLDe',
     'GHuTwhh9txr69tHBM2f1mPE6tWn9XCYKMi3nRNFrYvGv9Yy',
+    'CuHWHNcBt3ASMVSJmcJyiBWGxxiWLyjYoYbGjfhL4ovoeSd',
     'HtRTwHSP6fYC5PtCsJ7pG4H1hwyPhzXbtVTTVRJ6kvfPFe1',
-    'F87P5Ab1QFq68a2tCq2N7TSmkfDUtG7EYUecgSBaYRFeCnf',
     'Cu7QaEnRGPE91WvLduzUii2ZNa3jhMWtmB8SYwumycNRmoN'
   ]
 

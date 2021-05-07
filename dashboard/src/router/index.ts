@@ -10,6 +10,8 @@ import Rmrk from '@/router/rmrk';
 import Profile from '@/router/profile';
 
 const Landing = () => import('@/components/landing/Landing.vue');
+const Sustainability = () => import('@/components/landing/Sustainability.vue');
+const Carbonless = () => import('@/components/landing/Carbonless.vue');
 const Settings = () => import('@/views/Settings.vue');
 const Extrinsics = () => import('@/views/Extrinsics.vue');
 const FourZeroFour = () => import('@/components/FourZeroFour.vue')
@@ -22,6 +24,16 @@ export default new Router({
       path: '/',
       name: 'landing',
       component: Landing,
+    },
+    {
+      path: '/sustainability',
+      name: 'sustainability',
+      component: Sustainability,
+    },
+    {
+      path: '/carbonless',
+      name: 'carbonless',
+      component: Carbonless,
     },
     ...Accounts,
     ...Transfer,

@@ -8,7 +8,8 @@ import Consolidator, { generateId } from './Consolidator';
 import { keyInfo as keysToTheKingdom } from '@/textile'
 import slugify from 'slugify';
 import { fetchCollectionMetadata, fetchNFTMetadata } from '../utils';
-import { ipfsToArweave } from '@/pinata'
+import { ipfsToArweave } from '@/utils/ipfs'
+import { fetchMimeType } from '@/fetch';
 
 export type RmrkType = RmrkWithMetaType | Emotion | Pack
 export type RmrkWithMetaType = CollectionWithMeta | NFTWithMeta
@@ -111,7 +112,7 @@ export class RmrkService extends TextileService<RmrkType> implements State {
 
   async getNFT(id: string): Promise<NFTWithMeta> {
     this.useNFT();
-    this.shouldExist(id);
+    await this.shouldExist(id);
     const nft = await this.getCollection<NFTWithMeta>(id)
     return nft
   }
@@ -166,13 +167,16 @@ export class RmrkService extends TextileService<RmrkType> implements State {
     return collection
   }
 
-  // async getPackListByIds(account: string, ids: string[]): Promise<Pack[]> {
-  //   this.usePack();
-  //   const query: Query = new Query();
-  //   ids.forEach(id => query.or(new Where('id').eq(id)))
-  //   query.and('')
-  //   const collections = await this.find<Pack>(query)
-  //   return collections
+  // DEV: If textile shouts someting about types, write it here :)
+  // async migrate() {
+  //   this.useNFT();
+  //   const onlyPositive = ({ status }: PromiseSettledResult<NFTWithMeta>)  => status === 'fulfilled'
+  //   const onlyValue = ({ value }: PromiseFulfilledResult<NFTWithMeta>) => value
+  //   const n = await this.getAllNFTs();
+  //   const typed = await Promise.allSettled(n.map(withTypeMap))
+  //   .then(res => res.filter(onlyPositive).map(v => onlyValue(v as PromiseFulfilledResult<NFTWithMeta>)))
+  //   await this.update(typed)
+  //   return typed
   // }
 
   getLastSyncedBlock(): Promise<number> {
@@ -184,7 +188,7 @@ export class RmrkService extends TextileService<RmrkType> implements State {
 
   async getAppreciationsForNFT(id: string): Promise<Emotion[]> {
     this.useNFT();
-    this.shouldExist(id);
+    await this.shouldExist(id);
     this.useAppreciation();
     const query: QueryJSON = new Where('remarkId').eq(id)
     const appreciations = await this.find<Emotion>(query)
@@ -248,7 +252,7 @@ export class RmrkService extends TextileService<RmrkType> implements State {
     this.useCollection();
 
     try {
-      this.shouldExist(view.id)
+      await this.shouldExist(view.id)
       const collection = await this.getCollection<CollectionWithMeta>(view.id)
       Consolidator.isIssuer(collection, caller)
       const updatedCollection: CollectionWithMeta = {
@@ -268,7 +272,7 @@ export class RmrkService extends TextileService<RmrkType> implements State {
     }
 
     this.useNFT();
-    this.shouldExist(view.id);
+    await this.shouldExist(view.id);
     const nft = await this.getCollection<NFTWithMeta>(view.id)
     Consolidator.isOwner(nft, caller)
     if (Number(view.metadata) >= 0) {
@@ -283,7 +287,7 @@ export class RmrkService extends TextileService<RmrkType> implements State {
 
   private async consume(view: RmrkInteraction, caller: string): Promise<NFTWithMeta> {
     this.useNFT();
-    this.shouldExist(view.id);
+    await this.shouldExist(view.id);
     const nft = await this.getCollection<NFTWithMeta>(view.id)
     Consolidator.isOwner(nft, caller)
     await this.remove(nft._id)
@@ -602,6 +606,7 @@ export const migrateNFT = async (nft: NFT): Promise<NFTWithMeta> => {
   try {
     const metadata = await fetchNFTMetadata(nft);
     const final = mergeNFT(nft, metadata);
+    final.type = await fetchMimeType(final.animation_url || final.image)
     return final
   } catch (e) {
     console.warn(e)
@@ -635,3 +640,9 @@ export const collectionToArweave = async (collection: CollectionWithMeta): Promi
   }
 }
 
+const urlMap = ({ animation_url, image }: NFTWithMeta) => animation_url || image
+
+export const withTypeMap = async (nft: NFTWithMeta): Promise<NFTWithMeta> => {
+  const type = await fetchMimeType(urlMap(nft));
+  return {...nft, type}
+}

@@ -48,7 +48,7 @@ export default class Money extends Vue {
           vs_currencies: this.showFiatValue
         }
       })
-
+      // 420 * 10 ** 12
       this.fiatValue = data[this.coinId][this.showFiatValue] * Number(this.value)
     } catch (error) {
       console.log(error)

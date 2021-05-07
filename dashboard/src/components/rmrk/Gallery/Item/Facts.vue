@@ -27,14 +27,20 @@
           <p class="subtitle is-size-6">
             <b>SN:</b>{{ nft.sn }}
           </p>
+          <p class="subtitle is-size-6">
+            <b>TAGS:</b>
+             <b-taglist>
+              <b-tag v-for="(tag, index) in tags" :key="index">{{tag}}</b-tag>
+            </b-taglist>
+          </p>
           <ArweaveLink v-if="nft.imageArId" :id="nft.imageArId" label="image" />
           <ArweaveLink v-if="nft.animationArId" :id="nft.animationArId" label="animated" />
-          <p class="subtitle is-size-6">
-            <b>IPFS</b>: {{ multimediaCid }}
-            <ol v-if="showGwLinks">
+          <p v-if="imageId" class="subtitle is-size-6"  >
+            <b>IPFS</b>:
+            <ol>
               <li v-for="gw in gwList"
               :key="gw">
-                <a :href="gw+multimediaCid" target="_blank">Gateway</a>
+                <a :href="gw+imageId" target="_blank">Gateway</a>
               </li>
             </ol>
           </p>
@@ -45,7 +51,7 @@
 
 <script lang="ts" >
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
-import { extractCid } from '@/pinata';
+import { extractCid } from '@/utils/ipfs';
 import { NFTWithMeta } from '../../service/scheme';
 import { emptyObject } from '@/utils/empty';
 const components = {
@@ -55,7 +61,7 @@ const components = {
 @Component({ components })
 export default class Facts extends Vue {
   @Prop({ default: () => emptyObject<NFTWithMeta>() }) public nft!: NFTWithMeta;
-  public multimediaCid: string = 'IPFS Gateways';
+  public multimediaCid: string = '';
   public showGwLinks: boolean = false;
   public gwList: any = [
     'https://gateway.pinata.cloud/ipfs/',
@@ -65,10 +71,19 @@ export default class Facts extends Vue {
     'https://dweb.link/ipfs/'
   ];
 
-
-  public async created() {
-    this.multimediaCid = await extractCid(this.nft && this.nft.image);
-    this.showGwLinks = true;
+  get tags() {
+    return this.nft.attributes?.filter(({ trait_type }) => !trait_type).map(({ value }) => value)
   }
+
+
+  get imageId() {
+    return extractCid(this.nft.image);
+  }
+
+// public created() {
+  //   console.log(this.nft)
+  //   this.multimediaCid = extractCid(this.nft.image);
+  //   this.showGwLinks = true;
+  // }
 }
 </script>
