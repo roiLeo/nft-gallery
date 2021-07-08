@@ -21,7 +21,7 @@
 		  		@click.native="toast('Copied to clipboard')"
 		    >
 		    </b-icon>
-		</b-tooltip> 			
+		</b-tooltip>
  		</span>
 	</div>
 </template>
@@ -61,7 +61,7 @@ export default class OnChainProperty extends Vue{
 		this.webVerified();
 		this.riotVerified();
 		this.legalVerified();
-	}	
+	}
 
 
 	private verify(content: Property){
@@ -85,7 +85,7 @@ export default class OnChainProperty extends Vue{
 		if(this.verify(this.twitter)){
 			this.icons.push({
 				'label': this.twitter,
-				'size': 'is-large',
+				'size': 'is-medium',
 				'pack': 'fab',
 				'icon': 'twitter',
 			});
@@ -120,7 +120,7 @@ export default class OnChainProperty extends Vue{
 				'label': this.legal,
 				'pack': 'fas',
 				'icon': 'users',
-				'size': 'is-large',
+				'size': 'is-medium',
 			});
 		}
 	}
