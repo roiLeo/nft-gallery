@@ -1,5 +1,5 @@
 <template>
-  <div class="card nft-card" :class="{'is-current-owner': accountIsCurrentOwner()}">
+  <div class="card nft-card" :class="{'is-current-owner': accountIsCurrentOwner()}" :style="{transform: `rotateX(${xRotation}deg) rotateY(${yRotation}deg)`}">
     <LinkResolver class="nft-card__skeleton" :route="type" :param="id" :link="link" tag="div" >
       <div class="card-image" v-if="image">
         <span v-if="emoteCount" class="card-image__emotes">
@@ -76,6 +76,8 @@ export default class GalleryCard extends Vue {
   @Prop() public price!: string;
   @Prop() public metadata!: string;
   @Prop() public currentOwner!: string;
+  protected xRotation: number = 0
+  protected yRotation: number = 0
 
   private placeholder = '/koda300x300.svg';
 
@@ -94,6 +96,28 @@ export default class GalleryCard extends Vue {
       }
     }
   }
+
+  public created() {
+    window.addEventListener('mousemove', this.onMouseMove)
+  }
+
+  public onMouseMove(event: MouseEvent) {
+    let mouseX = event.clientX
+		let mouseY = event.clientY
+		let halfWidth = window.innerWidth / 2
+		let halfHeight = window.innerHeight / 2
+		let xdeg = (mouseX - halfWidth) / halfWidth
+		let ydeg = (mouseY - halfHeight) / halfHeight
+
+    this.xRotation = xdeg * 50
+    this.yRotation = ydeg * 50
+  }
+
+  protected updateReflection(degree: number, percentage: number) {
+    // document.querySelectorAll('.card')[0].style.background = `linear-gradient(${degree}deg, rgba(255,255,255,0) 0%,rgba(255,255,255,0.5) ${percentage}%,rgba(255,255,255,0) 100%))`
+    // card.style.backgroundSize = "cover"
+  }
+
 
   @Watch('accountId', { immediate: true })
   hasAccount(value: string, oldVal: string) {
@@ -192,11 +216,11 @@ export default class GalleryCard extends Vue {
     }
 
     &:hover .card-image img {
-      transform: scale(1.1) translateY(-5%);
+      // transform: scale(1.1) translateY(-5%);
     }
 
     &:hover .ff-canvas {
-      transform: scale(1.1) translateY(-50%);
+      // transform: scale(1.1) translateY(-50%);
     }
 
     &:hover .card-image__emotes {

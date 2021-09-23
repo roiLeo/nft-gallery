@@ -2,7 +2,7 @@
   <div class="columns is-multiline">
     <div
       class="column is-one-third-desktop is-one-third-tablet"
-      v-for="nft in items"
+      v-for="nft in items.slice(0, 2)"
       :key="nft.id"
     >
       <GalleryCard :id="nft.id"
@@ -31,5 +31,13 @@ export default class GalleryCardList extends Vue {
   @Prop({ default: 'nftDetail' }) public type!: string;
   @Prop({ default: 'rmrk/detail' }) public link!: string;
   @Prop() public items!: RmrkType[];
+  public limit: number = 5
+
+  /**
+   * name
+   */
+  public computedItems() {
+    return this.limit ? this.items.slice(0, this.limit) : this.items;
+  }
 }
 </script>
