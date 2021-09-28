@@ -25,8 +25,8 @@
                     nft.emoteCount
                   }}</span>
                 </span>
-                <!-- <BasicImage :src="nft.image" :alt="nft.name" customClass="gallery__image-wrapper" /> -->
-                <figure class="gallery__image-wrapper">
+                <BasicImage :src="nft.image" :alt="nft.name" customClass="gallery__image-wrapper" />
+                <!-- <figure class="gallery__image-wrapper">
                   <img
                     :src="placeholder"
                     :data-src="nft.image"
@@ -36,7 +36,7 @@
                     :class="{ 'card-image__burned': nft.burned }"
                     @error="onError"
                   />
-                </figure>
+                </figure> -->
                 <span v-if="nft.price > 0" class="card-image__price">
                   <Money :value="nft.price" inline />
                 </span>
@@ -342,13 +342,13 @@ export default class Gallery extends Vue {
     cursor: pointer;
   }
 
-  &__image {
-    bottom: 0;
-    left: 0;
-    position: absolute;
-    right: 0;
+  .card-image img {
+    bottom: 0!important;
+    left: 0!important;
+    position: absolute!important;
+    right: 0!important;
     border-radius: 8px;
-    top: 50%;
+    top: 50%!important;
     transition: all 0.3s;
     display: block;
     width: 100%;
@@ -464,7 +464,7 @@ export default class Gallery extends Vue {
 
         &:hover .gallery__image-wrapper img {
           transform: scale(1.1) translateY(-50%);
-          transition: transform 0.3s linear;
+          // transition: transform 0.3s linear;
         }
 
         &:hover .ff-canvas {
