@@ -110,6 +110,7 @@ export default class PriceChart extends Vue {
 					name: 'priceHistory',
 					type: 'line',
 					smooth: 'true',
+          itemStyle: {normal: {areaStyle: {type: 'default'}}},
 					lineStyle: {
 						color: '#d32e79',
 					},
