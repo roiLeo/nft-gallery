@@ -4,7 +4,7 @@
       <div class="level-item has-text-centered">
         <div>
           <p class="heading">Items</p>
-          <p class="title">{{ collectionLength }}</p>
+          <p class="title">{{ collectionListedNFT }}/{{ collectionLength }}</p>
         </div>
       </div>
       <div class="level-item has-text-centered">
@@ -63,22 +63,27 @@ export default class extends Vue {
       .flat()
   }
 
-  get collectionLength() {
+  get collectionLength(): number {
     return this.nfts.length
   }
 
-  get collectionFloorPrice() {
+  get collectionFloorPrice(): number {
     return Math.min(
       ...this.nfts.map(nft => Number(nft.price)).filter(price => price > 0)
     )
   }
 
-  get collectionSoldedNFT() {
+  get collectionListedNFT(): number {
+    return this.nfts.map(nft => nft.price).filter(price => price !== '0')
+      .length
+  }
+
+  get collectionSoldedNFT(): number {
     return this.nfts.map(nft => nft.price).filter(price => price === '0')
       .length
   }
 
-  get collectionTradedVol() {
+  get collectionTradedVol(): number {
     return this.nfts
       .map(nft =>
         nft.events.filter(
