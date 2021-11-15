@@ -98,7 +98,6 @@ import {
 import isShareMode from '@/utils/isShareMode'
 import shouldUpdate from '@/utils/shouldUpdate'
 import collectionById from '@/queries/collectionById.graphql'
-import nftListByCollection from '@/queries/nftListByCollection.graphql'
 import { CollectionMetadata } from '../types'
 import { NFT } from '@/components/rmrk/service/scheme'
 import { exist } from '@/components/rmrk/Gallery/Search/exist'
@@ -210,7 +209,6 @@ export default class CollectionItem extends Mixins(
   public created(): void {
     this.checkId()
     this.checkActiveTab()
-    this.loadStats()
     this.$apollo.addSmartQuery('collection', {
       query: collectionById,
       loadingKey: 'isLoading',
@@ -232,20 +230,6 @@ export default class CollectionItem extends Mixins(
 
   }
 
-  public loadStats(): void {
-    const nftStatsP = this.$apollo.query({
-      query: nftListByCollection,
-      variables: {
-        id: this.id,
-      }
-    })
-
-    nftStatsP.then(({ data }) => data?.nFTEntities?.nodes || []).then(nfts => {
-      this.stats = nfts
-      this.loadPriceData()
-    })
-  }
-
   public loadPriceData(): void {
     this.priceData = []
 
@@ -264,6 +248,8 @@ export default class CollectionItem extends Mixins(
 
   public async handleResult({data}: any): Promise<void> {
     this.total = data.collectionEntity.nfts.totalCount
+    this.stats = data.collectionEntity.nfts.nodes
+    this.loadPriceData()
     await this.fetchMetadata()
   }
 

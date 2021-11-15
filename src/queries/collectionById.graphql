@@ -23,6 +23,7 @@ query collectionById(
         price
         burned
         currentOwner
+        events
       }
     }
   }
