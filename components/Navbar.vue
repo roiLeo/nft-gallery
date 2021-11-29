@@ -180,7 +180,7 @@ export default class NavbarMenu extends Vue {
       tag: 'a',
       href: 'https://twitter.com/Kodadot'
     }
-  ]
+  ];
 
   // get chainColor() {
   //   return {
