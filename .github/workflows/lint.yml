@@ -21,14 +21,14 @@ jobs:
       - name: Install Dependencies
         run: yarn
 
+      - name: Run Code Lint report
+        run: yarn lint:report
+
       - name: Annotate Code Linting Results
         uses: ataylorme/eslint-annotate-action@1.2.0
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           report-json: eslint_report.json
-
-      - name: Run Code Lint report
-        run: yarn lint:report
 
       - name: Upload ESLint report
         uses: actions/upload-artifact@v2
