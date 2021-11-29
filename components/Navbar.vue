@@ -173,14 +173,14 @@ export default class NavbarMenu extends Vue {
       tag: 'router-link',
       to: { name: 'settings' },
     },
-  ]
+  ];
   private navbarExternal: any = [
     {
       name: 'Twitter',
       tag: 'a',
       href: 'https://twitter.com/Kodadot'
     }
-  ]
+  ];
 
   // get chainColor() {
   //   return {
