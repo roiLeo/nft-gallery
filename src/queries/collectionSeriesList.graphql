@@ -1,0 +1,20 @@
+#import "./collection.graphql"
+
+query collectionIssuerList($denyList: [String!]) {
+  collectionEntities(filter: { issuer: { notIn: $denyList } }) {
+    nodes {
+      issuer
+      nfts(filter: { burned: { distinctFrom: true } }) {
+        totalCount
+        nodes {
+          issuer
+          currentOwner
+          metadata
+          price
+          events
+        }
+      }
+      ...collection
+    }
+  }
+}

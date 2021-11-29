@@ -3,8 +3,8 @@
     <Loader :value="isLoading" />
     <!-- TODO: Make it work with graphql -->
     <Search v-bind.sync="searchQuery">
-      <b-field class="column is-4 mb-0 is-offset-2 is-narrow">
-        <Pagination simple :total="total" v-model="currentValue" replace class="is-right" />
+      <b-field class="column">
+        <Pagination hasMagicBtn simple :total="total" v-model="currentValue" :perPage=12 replace class="is-right" />
       </b-field>
     </Search>
     <!-- <b-button @click="first += 1">Show {{ first }}</b-button> -->
@@ -25,17 +25,7 @@
                     nft.emoteCount
                   }}</span>
                 </span>
-                <figure class="gallery__image-wrapper">
-                  <img
-                    :src="placeholder"
-                    :data-src="nft.image"
-                    :data-type="nft.type"
-                    :alt="nft.name"
-                    class="lazyload gallery__image"
-                    :class="{ 'card-image__burned': nft.burned }"
-                    @error="onError"
-                  />
-                </figure>
+                <BasicImage :src="nft.image" :alt="nft.name" customClass="gallery__image-wrapper" />
                 <span v-if="nft.price > 0" class="card-image__price">
                   <Money :value="nft.price" inline />
                 </span>
@@ -88,6 +78,7 @@
     <Pagination
       class="pt-5 pb-5"
       :total="total"
+      :perPage=12
       v-model="currentValue"
       replace
     />
@@ -95,25 +86,23 @@
 </template>
 
 <script lang="ts" >
-import { Component, Vue } from 'vue-property-decorator';
+import { Component, Vue } from 'vue-property-decorator'
 
-import { NFTWithMeta, NFT, Metadata } from '../service/scheme';
-import { fetchNFTMetadata, getSanitizer, sanitizeIpfsUrl } from '../utils';
-import { basicAggQuery } from './Search/query';
-import Freezeframe from 'freezeframe';
-import 'lazysizes';
-import { SearchQuery } from './Search/types';
+import { NFTWithMeta, NFT, Metadata } from '../service/scheme'
+import { fetchNFTMetadata, getSanitizer } from '../utils'
+import Freezeframe from 'freezeframe'
+import 'lazysizes'
+import { SearchQuery } from './Search/types'
 
-import nftListWithSearch from '@/queries/nftListWithSearch.graphql';
-import { getMany, update } from 'idb-keyval';
-import { denyList } from '@/constants';
-import { $limit } from 'mingo/operators/pipeline';
+import nftListWithSearch from '@/queries/nftListWithSearch.graphql'
+import { getMany, update } from 'idb-keyval'
+import { denyList } from '@/constants'
 
 interface Image extends HTMLImageElement {
   ffInitialized: boolean;
 }
 
-const controlFilters = [{ name: { notLikeInsensitive: `%Penis%` } }];
+const controlFilters = [{ name: { notLikeInsensitive: '%Penis%' } }]
 
 type NFTType = NFTWithMeta;
 const components = {
@@ -122,7 +111,8 @@ const components = {
   Money: () => import('@/components/shared/format/Money.vue'),
   Pagination: () => import('./Pagination.vue'),
   Loader: () => import('@/components/shared/Loader.vue'),
-};
+  BasicImage: () => import('@/components/shared/view/BasicImage.vue'),
+}
 
 @Component<Gallery>({
   metaInfo() {
@@ -134,7 +124,7 @@ const components = {
         },
         {
           property: 'og:image',
-          content: 'https://nft.kodadot.xyz/kodadot_gallery.jpg'
+          content: this.defaultGalleryMetaImage
         },
         {
           property: 'og:description',
@@ -150,10 +140,10 @@ const components = {
         },
         {
           property: 'twitter:image',
-          content: 'https://nft.kodadot.xyz/kodadot_gallery.jpg'
+          content: this.defaultGalleryMetaImage
         }
       ]
-    };
+    }
   },
   components
 })
@@ -163,19 +153,27 @@ export default class Gallery extends Vue {
   private searchQuery: SearchQuery = {
     search: '',
     type: '',
-    sortBy: { blockNumber: -1 }
+    sortBy: 'BLOCK_NUMBER_DESC',
+    listed: false,
   };
   private first = 12;
   private placeholder = '/koda300x300.svg';
   private currentValue = 1;
   private total = 0;
 
+  get defaultGalleryMetaImage(): string {
+    const url = new URL(window.location.href)
+    return (
+      `${url.protocol}//${url.hostname}/Kodadot_Card_Gallery.jpg`
+    )
+  }
+
   get isLoading() {
     return this.$apollo.queries.nfts.loading
   }
 
   get offset() {
-    return this.currentValue * this.first - this.first;
+    return this.currentValue * this.first - this.first
   }
 
   public async created() {
@@ -190,54 +188,50 @@ export default class Gallery extends Vue {
           first: this.first,
           offset: this.offset,
           denyList,
-          search: this.searchQuery.search
-            ? [
-                {
-                  name: { likeInsensitive: `%${this.searchQuery.search}%` }
-                }
-              ]
-            : []
-        };
+          orderBy: this.searchQuery.sortBy,
+          search: this.buildSearchParam()
+        }
       }
-    });
+    })
   }
 
   protected async handleResult({ data }: any) {
-    this.total = data.nFTEntities.totalCount;
+    this.total = data.nFTEntities.totalCount
     this.nfts = data.nFTEntities.nodes.map((e: any) => ({
       ...e,
       emoteCount: e.emotes?.totalCount
-    }));
+    }))
 
     const storedMetadata = await getMany(
       this.nfts.map(({ metadata }: any) => metadata)
-    );
+    )
 
     storedMetadata.forEach(async (m, i) => {
       if (!m) {
         try {
-          const meta = await fetchNFTMetadata(this.nfts[i], getSanitizer(this.nfts[i].metadata, undefined, 'permafrost'));
+          const meta = await fetchNFTMetadata(this.nfts[i], getSanitizer(this.nfts[i].metadata, undefined, 'permafrost'))
           Vue.set(this.nfts, i, {
             ...this.nfts[i],
             ...meta,
             image: getSanitizer(meta.image || '')(meta.image || '')
-          });
-          update(this.nfts[i].metadata, () => meta);
+          })
+          update(this.nfts[i].metadata, () => meta)
         } catch (e) {
-          console.warn('[ERR] unable to get metadata');
+          console.warn('[ERR] unable to get metadata')
         }
       } else {
         Vue.set(this.nfts, i, {
           ...this.nfts[i],
           ...m,
           image: getSanitizer(m.image || '')(m.image || '')
-        });
+        })
       }
-    });
+    })
 
 
-    this.prefetchPage(this.offset + this.first, this.offset + (3 * this.first));
+    this.prefetchPage(this.offset + this.first, this.offset + (3 * this.first))
   }
+
 
   public async prefetchPage(offset: number, prefetchLimit: number) {
     try {
@@ -247,36 +241,31 @@ export default class Gallery extends Vue {
           first: this.first,
           offset,
           denyList,
-          search: this.searchQuery.search
-            ? [
-                {
-                  name: { likeInsensitive: `%${this.searchQuery.search}%` }
-                }
-              ]
-            : []
+          orderBy: this.searchQuery.sortBy,
+          search: this.buildSearchParam()
         }
-      });
+      })
 
       const {
         data: {
           nFTEntities: { nodes: nftList }
         }
-      } = await nfts;
+      } = await nfts
 
-      const storedPromise = getMany(nftList.map(({ metadata }: any) => metadata));
+      const storedPromise = getMany(nftList.map(({ metadata }: any) => metadata))
 
-      const storedMetadata = await storedPromise;
+      const storedMetadata = await storedPromise
 
       storedMetadata.forEach(async (m, i) => {
         if (!m) {
           try {
-            const meta = await fetchNFTMetadata(nftList[i]);
-            update(nftList[i].metadata, () => meta);
+            const meta = await fetchNFTMetadata(nftList[i])
+            update(nftList[i].metadata, () => meta)
           } catch (e) {
-            console.warn('[ERR] unable to get metadata');
+            console.warn('[ERR] unable to get metadata')
           }
         }
-      });
+      })
     } catch (e: any) {
       console.warn('[PREFETCH] Unable fo fetch', offset, e.message)
     } finally {
@@ -287,37 +276,55 @@ export default class Gallery extends Vue {
 
   }
 
+  private buildSearchParam(): Record<string, unknown>[] {
+    const params = []
+
+    if (this.searchQuery.search) {
+      params.push({
+        name: { likeInsensitive: `%${this.searchQuery.search}%` }
+      })
+    }
+
+    if (this.searchQuery.listed) {
+      params.push({
+        price: { greaterThan: '0' }
+      })
+    }
+
+    return params
+  }
+
   get results() {
     // if (this.searchQuery) {
     //   return basicAggQuery(expandedFilter(this.searchQuery, this.nfts))
     // }
 
-    return basicAggQuery(this.nfts as NFTWithMeta[]);
+    return this.nfts as NFTWithMeta[]
 
     // return basicAggQuery(expandedFilter(this.searchQuery, this.nfts));
   }
 
   setFreezeframe() {
     document.addEventListener('lazybeforeunveil', async e => {
-      const target = e.target as Image;
-      const type = target.dataset.type as string;
-      const isGif = type === 'image/gif';
+      const target = e.target as Image
+      const type = target.dataset.type as string
+      const isGif = type === 'image/gif'
 
       if (isGif && !target.ffInitialized) {
         const ff = new Freezeframe(target, {
           trigger: false,
           overlay: true,
           warnings: false
-        });
+        })
 
-        target.ffInitialized = true;
+        target.ffInitialized = true
       }
-    });
+    })
   }
 
   onError(e: Event) {
-    const target = e.target as Image;
-    target.src = this.placeholder;
+    const target = e.target as Image
+    target.src = this.placeholder
   }
 }
 </script>
@@ -340,18 +347,14 @@ export default class Gallery extends Vue {
     cursor: pointer;
   }
 
-  &__image {
-    bottom: 0;
-    left: 0;
-    position: absolute;
-    right: 0;
+  .card-image img {
     border-radius: 8px;
     top: 50%;
     transition: all 0.3s;
     display: block;
     width: 100%;
     height: auto;
-    transform: scale(1) translateY(-50%);
+    transform: scale(1);
   }
 
   .ff-container {
@@ -461,11 +464,12 @@ export default class Gallery extends Vue {
         }
 
         &:hover .gallery__image-wrapper img {
-          transform: scale(1.1) translateY(-50%);
+          transform: scale(1.1);
+          transition: transform 0.3s linear;
         }
 
         &:hover .ff-canvas {
-          transform: scale(1.1) translateY(-50%);
+          transform: scale(1.1);
         }
 
         &:hover .card-image__emotes {

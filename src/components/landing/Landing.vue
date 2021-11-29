@@ -2,86 +2,115 @@
   <section class="hero is-dark homepage">
     <div class="hero-body">
       <div class="container">
-        <h1 class="title is-1 homepage__title">
-          <span class="text__stroked">Koda</span>
-          <span>Dot</span>
-        </h1>
-        <h2 class="title is-1 is-flex is-flex-direction-column uppercase homepage__heading">
-          <span>
-            Carbon neutral
-          </span>
-          <span class="text__stroked">
-            Kusama native
-          </span>
-          <span>
-            NFT plaftorm
-          </span>
-          <span class="title is-6 homepage__subtitle uppercase text-semibold">
-            Built on
-            <span class="text-bold text-primary">
-              RMRK Protocol
-            </span>
-          </span>
-        </h2>
-        <div class="buttons">
-          <b-dropdown aria-role="list" class="mr-2">
-            <template #trigger>
-                <b-button
-                  label="Create"
+        <div class="columns">
+          <div class="column">
+            <h1 class="title is-1 homepage__title">
+              <span class="text__stroked">Koda</span>
+              <span>Dot</span>
+            </h1>
+            <h2 class="title is-1 is-flex is-flex-direction-column uppercase homepage__heading">
+              <span>
+                Carbon neutral
+              </span>
+              <span class="text__stroked">
+                Kusama native
+              </span>
+              <span>
+                NFT plaftorm
+              </span>
+              <span class="title is-6 homepage__subtitle uppercase text-semibold">
+                Built on
+                <span class="text-bold text-primary">
+                  RMRK Protocol
+                </span>
+              </span>
+            </h2>
+            <div class="buttons">
+              <b-dropdown aria-role="list" class="mr-2">
+                <template #trigger>
+                    <b-button
+                      label="Create"
+                      type="is-primary"
+                    />
+                </template>
+                <b-dropdown-item
+                  aria-role="listitem"
+                >
+                  <router-link :to="{ name: 'rmrk'}">
+                    {{ $t('Classic') }}
+                  </router-link>
+                </b-dropdown-item>
+                <b-dropdown-item
+                  aria-role="listitem"
+                >
+                  <router-link :to="{ name: 'simpleMint'}">
+                    {{ $t('Simple') }}
+                  </router-link>
+                </b-dropdown-item>
+              </b-dropdown>
+              <b-button
+                  tag="router-link"
+                  to="/rmrk/collections"
                   type="is-primary"
-                />
-            </template>
-            <b-dropdown-item
-              aria-role="listitem"
-            >
-              <router-link :to="{ name: 'rmrk'}">
-                {{ $t('Classic') }}
-              </router-link>
-            </b-dropdown-item>
-            <b-dropdown-item
-              aria-role="listitem"
-            >
-              <router-link :to="{ name: 'simpleMint'}">
-                {{ $t('Simple') }}
-              </router-link>
-            </b-dropdown-item>
-          </b-dropdown>
-          <b-button
-              tag="router-link"
-              to="/rmrk/gallery"
-              type="is-primary"
-          >
-            Gallery
-          </b-button>
-          <b-button
-              tag="router-link"
-              to="/spotlight"
-              type="is-primary"
-          >
-            Spotlight
-          </b-button>
-          <b-button
-              tag="router-link"
-              to="/about"
-              type="is-primary"
-          >
-            About
-          </b-button>
-          <b-button
-              tag="router-link"
-              to="/rmrk/faq"
-              type="is-primary"
-          >
-            Faq
-          </b-button>
-          <b-button
-              tag="router-link"
-              to="/grants"
-              type="is-primary"
-          >
-            Grants
-          </b-button>
+              >
+                Collections
+              </b-button>
+              <b-button
+                  tag="router-link"
+                  to="/rmrk/gallery"
+                  type="is-primary"
+              >
+                Gallery
+              </b-button>
+              <b-button
+                tag="router-link"
+                to="/series-insight"
+                type="is-primary"
+              >
+                Series
+              </b-button>
+              <b-button
+                  tag="router-link"
+                  to="/spotlight"
+                  type="is-primary"
+              >
+                Spotlight
+              </b-button>
+              <b-button
+                  tag="router-link"
+                  to="/about"
+                  type="is-primary"
+              >
+                About
+              </b-button>
+              <b-button
+                  tag="router-link"
+                  to="/rmrk/faq"
+                  type="is-primary"
+              >
+                Faq
+              </b-button>
+              <b-button
+                  tag="router-link"
+                  to="/grants"
+                  type="is-primary"
+              >
+                Grants
+              </b-button>
+              <b-button
+                  tag="router-link"
+                  to="/jobs"
+                  type="is-primary"
+              >
+                Jobs
+              </b-button>
+            </div>
+          </div>
+          <div class="column has-text-right has-text-left-mobile">
+            <iframe src="https://discord.com/widget?id=840514076538830888&theme=dark" width="350" height="500" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
+          </div>
         </div>
+
         <div class="homepage__box">
           <div class="homepage__box-content">
             <p>
@@ -124,7 +153,7 @@
           </div>
           <b-button
             tag="a"
-            href="https://github.com/kodadot"
+            href="https://github.com/kodadot/nft-gallery/issues/new/choose"
             target="_blank"
             rel="noopener noreferrer"
             type="is-primary"
@@ -138,51 +167,41 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator';
-import nftListWithSearch from '@/queries/nftListWithSearch.graphql';
-import { denyList } from '@/constants';
-import { getMany, update } from 'idb-keyval';
-import { fetchNFTMetadata } from '../rmrk/utils';
+import { Component, Vue } from 'vue-property-decorator'
+import nftListWithSearch from '@/queries/nftListWithSearch.graphql'
+import { denyList } from '@/constants'
+import { getMany, update } from 'idb-keyval'
+import { fetchNFTMetadata } from '../rmrk/utils'
 
 const components = {
   Identity: () => import('@/components/shared/format/Identity.vue'),
-};
+}
 @Component<Landing>({
   metaInfo() {
     return {
       meta: [
         { property: 'og:title', content: 'KodaDot - Kusama NFT Market explorer'},
-        { property: 'og:image', content: 'https://nft.kodadot.xyz/kodadot_carbonless.jpg'},
+        { property: 'og:image', content: this.defaultLandingMetaImage},
         { property: 'og:description', content: 'Low carbon NFT gallery on Kusama'},
         { property: 'twitter:title', content: 'KodaDot - Kusama NFT Market Explorer' },
         { property: 'twitter:description', content: 'Low carbon NFT gallery on Kusama'},
-        { property: 'twitter:image', content: 'https://nft.kodadot.xyz/kodadot_carbonless.jpg'},
+        { property: 'twitter:image', content: this.defaultLandingMetaImage},
       ]
     }
   },
   components
 })
 export default class Landing extends Vue {
-
-  public publicCommunity: any = [
-    ['🇦🇲 Armenia', 'https://t.me/kodadotarmenia'],
-    // ['🇧🇩 Bengali', 'https://t.me/KodaDot_Bengali'], seems not active
-    ['🇨🇿 Česko', 'https://t.me/joinchat/Fhnvbi5a_wRjNzFk'],
-    ['🇯🇵 Japan', 'https://t.me/kodadotjapan'],
-    ['🇵🇱 Polska', 'https://t.me/joinchat/HG7J2RAk906N7scb'],
-    ['🇵🇹 Portuguese', 'https://t.me/joinchat/1UHYFZpVYmE1OTZk'],
-    ['🇷🇺 Russia', 'https://t.me/kodadotru'],
-    ['🇪🇸 Spanish','https://t.me/joinchat/HkF3cxImJAJGoRH9'],
-    ['🇹🇷 Türkiye', 'https://t.me/KodaDotTR'],
-    ['🌐 Global KodaDot Discord', 'https://discord.gg/u6ymnbz4PR'],
-    ['🏗 Developers', 'https://discord.gg/KkctBVQ8kP'],
-    // ['🇻🇳 Việt Nam', 'https://t.me/joinchat/GR0OiagewrkTzD4u'], seems not active
-    ['Want to help translate?', 'https://github.com/kodadot/nft-gallery/tree/i18n/src/locales']
-  ]
-
-  public mounted() {
-    this.fetchFirstGalleryPage();
+  get defaultLandingMetaImage(): string {
+    const url = new URL(window.location.href)
+    return (
+      `${url.protocol}//${url.hostname}/Kodadot_Card_Standard.jpg`
+    )
   }
+
+  // public mounted() {
+  //   this.fetchFirstGalleryPage()
+  // }
 
   public async fetchFirstGalleryPage() {
     const nfts = this.$apollo.query({
@@ -193,28 +212,28 @@ export default class Landing extends Vue {
         denyList,
         search: []
       }
-    });
+    })
 
     const {
       data: { nFTEntities: { nodes: nftList } }
-    } = await nfts;
+    } = await nfts
 
     const storedPromise = getMany(
       nftList.map(({ metadata }: any) => metadata)
-    );
+    )
 
-    const storedMetadata = await storedPromise;
+    const storedMetadata = await storedPromise
 
     storedMetadata.forEach(async (m, i) => {
       if (!m) {
         try {
-          const meta = await fetchNFTMetadata(nftList[i]);
-          update(nftList[i].metadata, () => meta);
+          const meta = await fetchNFTMetadata(nftList[i])
+          update(nftList[i].metadata, () => meta)
         } catch (e) {
-          console.warn('[ERR] unable to get metadata');
+          console.warn('[ERR] unable to get metadata')
         }
       }
-    });
+    })
 
 
   }
@@ -228,6 +247,7 @@ export default class Landing extends Vue {
   content: '';
   width: 100%;
   height: 100%;
+  color: $text;
 
   @include desktop {
     background: url('/homepage-bg.jpg') center bottom;
@@ -245,6 +265,7 @@ export default class Landing extends Vue {
 
   &__heading {
     font-size: 4rem;
+    color: $text;
   }
 
   &__box {

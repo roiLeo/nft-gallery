@@ -1,15 +1,31 @@
 <template>
   <b-field class="file is-primary">
-    <b-upload v-model="file" class="file-label" drag-drop :expanded="expanded" :accept="accept">
+    <b-upload
+      v-model="file"
+      class="file-label"
+      drag-drop
+      :expanded="expanded"
+      :accept="accept"
+      :multiple="multiple"
+    >
       <section class="section">
         <div class="content has-text-centered">
           <p>
             <b-icon v-if="!file && !url" :icon="icon" size="is-large" />
+            <b-icon
+              v-else-if="Array.isArray(file)"
+              icon="plus"
+              size="is-large"
+            />
             <img v-if="url && !hasError" :src="url" @error="hasError = true" />
             <b-icon v-if="hasError" icon="eye-slash" size="is-large" />
           </p>
           <p v-if="!file">{{ label }}</p>
-          <p v-else>Awesome your file is <b>{{ file.name }}</b>. Click or drop to change</p>
+          <p v-else-if="Array.isArray(file)">Click or drop to add more!</p>
+          <p v-else>
+            Awesome your file is <b>{{ file.name }}</b
+            >. Click or drop to change
+          </p>
         </div>
       </section>
     </b-upload>
@@ -17,8 +33,8 @@
 </template>
 
 <script lang="ts" >
-import { Component, Prop, Vue, Watch, Emit } from 'vue-property-decorator';
-import Tooltip from '@/components/shared/Tooltip.vue';
+import { Component, Prop, Vue, Watch, Emit } from 'vue-property-decorator'
+import Tooltip from '@/components/shared/Tooltip.vue'
 
 @Component({
   components: {
@@ -26,34 +42,65 @@ import Tooltip from '@/components/shared/Tooltip.vue';
   }
 })
 export default class extends Vue {
-  @Prop({ default: 'Drop your NFT here or click to upload' }) public label!: string;
+  @Prop({
+    default:
+      'Drop your NFT here or click to upload or simply paste image from clipboard'
+  })
+  public label!: string;
   @Prop({ default: 'upload' }) public icon!: string;
   @Prop(Boolean) public expanded!: boolean;
   @Prop(Boolean) public preview!: boolean;
+  @Prop(Boolean) public multiple!: boolean;
   @Prop(String) public accept!: string;
-  private file: Blob | null = null;
-  protected url: string = '';
-  protected hasError: boolean = false;
+  protected file: File[] | File | null = null;
+  protected url = '';
+  protected hasError = false;
+
+  public created() {
+    document.addEventListener('paste', this.onPasteImage)
+  }
+
+  public beforeDestroy() {
+    document.removeEventListener('paste', this.onPasteImage)
+  }
+
+  public onPasteImage(pasteEvent: ClipboardEvent) {
+    /* handling paste logic */
+    const item: DataTransferItem | any = pasteEvent?.clipboardData?.items[0]
+    if (item?.type.indexOf('image') === 0) {
+      const blob = item.getAsFile()
+      this.file = blob
+      this.createInput(blob)
+    }
+  }
 
   @Watch('file')
-  public createInput(file: Blob): void {
-    const reader = new FileReader();
-    reader.onload = () => {
-      // this.handleSelection(reader.result)
-      // console.log(reader.si);
-    };
-    this.$emit('input', file);
-    console.log(file.size);
-    if (this.preview) {
-      this.url = URL.createObjectURL(file);
-      this.hasError = false;
+  public createInput(file: Blob | Blob[]): void {
+    if (Array.isArray(file) && this.multiple) {
+      this.handleMultipleFilesUpload(file)
+    } else if (file) {
+      this.handleSingleFileUpload(file as Blob)
     }
-    reader.readAsText(file);
+  }
+
+  handleSingleFileUpload(file: Blob): void {
+    this.$emit('input', file)
+    if (this.preview && !this.multiple) {
+      this.url = URL.createObjectURL(file)
+      this.hasError = false
+    }
+  }
+
+  handleMultipleFilesUpload(files: Blob[]): void {
+    if (files.length > 0) {
+      this.$emit('input', files)
+      setTimeout(() => (this.file = []), 1000)
+    }
   }
 
   @Emit('change')
   public handleSelection(value: string | ArrayBuffer | null) {
-    return value;
+    return value
   }
 }
 </script>

@@ -1,24 +1,25 @@
 <template>
-  <div class="card share">
-    <footer class="card-footer">
-      <div class="card-footer-item">
+  <div class="share">
+    <b-field position="is-right">
+      <div class="control">
+        <slot />
+      </div>
+
+      <ShowQRModal class="control" :address="realworldFullPath" :title="label" />
+
+      <div class="control">
         <b-button
-          size="is-small"
-          v-clipboard:copy="realworldFullPathShare"
           @click="toast('URL copied to clipboard')"
-          class="share__root share__button"
+          v-clipboard:copy="realworldFullPathShare"
+          type="is-primary"
         >
-          <b-icon
-            size="is-medium"
-            pack="fas"
-            icon="link">
-          </b-icon>
+          <b-icon size="is-small" pack="fas" icon="link" />
         </b-button>
       </div>
-      <div class="card-footer-item" v-if="!onlyCopyLink">
+
+      <div class="control" v-if="!onlyCopyLink" @click="shareTooltip" @focusout="openFallbackShareTooltip">
         <b-tooltip
           position="is-left"
-          class="share__tooltip"
           :triggers="['click']"
           :auto-close="['outside', 'escape']"
           :active="active"
@@ -33,12 +34,7 @@
               :title="label"
               twitter-user="KodaDot"
             >
-              <b-icon
-                size="is-large"
-                pack="fab"
-                icon="twitter"
-              >
-              </b-icon>
+              <b-icon size="is-large" pack="fab" icon="twitter" />
             </ShareNetwork>
             <ShareNetwork
               tag="button"
@@ -47,27 +43,8 @@
               :url="realworldFullPath"
               :title="label"
             >
-              <b-icon
-                size="is-large"
-                pack="fab"
-                icon="telegram"
-              >
-              </b-icon>
+              <b-icon size="is-large" pack="fab" icon="telegram" />
             </ShareNetwork>
-            <!-- <ShareNetwork
-              tag="button"
-              class="button share__button is-medium"
-              network="line"
-              :url="realworldFullPath"
-              :title="label"
-            >
-              <b-icon
-                size="is-large"
-                pack="fab"
-                icon="line"
-              >
-              </b-icon>
-            </ShareNetwork> -->
             <ShareNetwork
               tag="button"
               class="button share__button is-medium"
@@ -75,12 +52,7 @@
               :url="realworldFullPath"
               :title="label"
             >
-              <b-icon
-                size="is-large"
-                pack="fab"
-                icon="facebook"
-              >
-              </b-icon>
+              <b-icon size="is-large" pack="fab" icon="facebook" />
             </ShareNetwork>
             <ShareNetwork
               tag="button"
@@ -89,12 +61,7 @@
               :url="realworldFullPath"
               :title="label"
             >
-              <b-icon
-                size="is-large"
-                pack="fab"
-                icon="facebook-messenger"
-              >
-              </b-icon>
+              <b-icon size="is-large" pack="fab" icon="facebook-messenger" />
             </ShareNetwork>
             <ShareNetwork
               tag="button"
@@ -103,12 +70,7 @@
               :url="realworldFullPath"
               :title="label"
             >
-              <b-icon
-                size="is-large"
-                pack="fab"
-                icon="whatsapp"
-              >
-              </b-icon>
+              <b-icon size="is-large" pack="fab" icon="whatsapp" />
             </ShareNetwork>
             <ShareNetwork
               tag="button"
@@ -117,12 +79,7 @@
               :url="realworldFullPath"
               :title="label"
             >
-              <b-icon
-                size="is-large"
-                pack="fab"
-                icon="pinterest"
-              >
-              </b-icon>
+              <b-icon size="is-large" pack="fab" icon="pinterest" />
             </ShareNetwork>
             <ShareNetwork
               tag="button"
@@ -131,12 +88,7 @@
               :url="realworldFullPath"
               :title="label"
             >
-              <b-icon
-                size="is-large"
-                pack="fas"
-                icon="envelope"
-              >
-              </b-icon>
+              <b-icon size="is-large" pack="fas" icon="envelope" />
             </ShareNetwork>
             <b-button
               size="is-medium"
@@ -144,78 +96,68 @@
               @click="toast('Code copied to clipboard')"
               class="share__button"
             >
-              <b-icon
-                size="is-medium"
-                pack="fas"
-                icon="code">
-              </b-icon>
+              <b-icon size="is-medium" pack="fas" icon="code" />
             </b-button>
           </template>
-          <b-button
-            type="is-dark"
-            class="share__root share__button"
-            size="is-small"
-            @click="active = !active"
-            @focusout="active = !active"
-          >
-            <b-icon
-              size="is-large"
-              pack="fas"
-              icon="share-alt"
-            >
-            </b-icon>
+          <b-button type="is-primary">
+            <b-icon size="is-small" pack="fas" icon="share" />
           </b-button>
         </b-tooltip>
       </div>
-    </footer>
+    </b-field>
   </div>
 </template>
 
 <script lang="ts" >
-import { Component, Prop, Vue } from 'vue-property-decorator';
-import { IFrame, emptyIframe } from '../../types';
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import { IFrame, emptyIframe } from '../../types'
 
-@Component({})
+const components = {
+  ShowQRModal: () => import('@/components/shared/modals/ShowQRModal.vue'),
+}
+@Component({
+  components,
+})
 export default class Sharing extends Vue {
-  @Prop({ default: 'Check this cool NFT on #KusamaNetwork #KodaDot' }) label!: string;
-  @Prop({ default: () => emptyIframe }) iframe!: IFrame;
-  @Prop(Boolean) onlyCopyLink!: boolean;
+  @Prop({ default: 'Check this cool NFT on #KusamaNetwork #KodaDot' }) label!: string
+  @Prop({ default: () => emptyIframe }) iframe!: IFrame
+  @Prop(Boolean) onlyCopyLink!: boolean
 
-  private active: boolean = false;
+  private active = false
 
-  get helloText() {
-    return this.label;
+  get helloText(): string {
+    return this.label
   }
 
-  get realworldFullPath() {
-    return `${window.location.origin}${this.$route.fullPath}`;
+  get realworldFullPath(): string {
+    return `${window.location.origin}${this.$route.fullPath}`
   }
 
-  get realworldFullPathShare() {
-    return `${window.location.origin}${this.$route.fullPath}`;
+  get realworldFullPathShare(): string {
+    return `${window.location.origin}${this.$route.fullPath}`
   }
 
-  get telegramUri() {
-    return `tg://msg_url?url=${this.realworldFullPath}&text=${this.helloText}`;
+  get telegramUri(): string {
+    return `tg://msg_url?url=${this.realworldFullPath}&text=${this.helloText}`
   }
 
-  get twitterUri() {
-    return `https://twitter.com/intent/tweet?text=${this.helloText}&via=KodaDot&url=${this.realworldFullPath}`;
+  get twitterUri(): string {
+    return `https://twitter.com/intent/tweet?text=${this.helloText}&via=KodaDot&url=${this.realworldFullPath}`
   }
 
   // get linemeUri() {
   //   return `https://lineit.line.me/share/ui?url=${this.realworldFullPath}&text=${this.helloText}`;
   // }
 
-  get width() {
+  get width(): string {
     return this.iframe.width || '480px'
   }
 
-  get height() {
+  get height(): string {
     return this.iframe.height || '840px'
   }
 
-  get customIframeUri() {
+  get customIframeUri(): string {
     return this.iframe.customUrl || this.realworldFullPath
   }
 
@@ -230,31 +172,46 @@ export default class Sharing extends Vue {
   }
 
   public toast(message: string): void {
-    this.$buefy.toast.open(message);
+    this.$buefy.toast.open(message)
+  }
+
+  public async shareTooltip(): Promise<void> {
+    this.openFallbackShareTooltip()
+    if (navigator.share) {
+      const shareData = {
+        title: 'KodaDot',
+        text: this.label,
+        url: this.realworldFullPath,
+      }
+      try {
+        await navigator.share(shareData)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
+
+  public openFallbackShareTooltip(): void {
+    // only call this when share api is not available, example on web
+    if (!navigator.share) {
+      this.active = !this.active
+    }
   }
 }
 </script>
 
 <style lang="scss">
-  @import "@/styles/variables";
+@import '@/styles/variables';
 
 .share {
-  box-shadow: 0px 0px 5px 0.5px #d32e79;
-
   &__button {
     color: $primary;
     background: transparent;
     border: none;
     margin: 5px;
 
-    &:hover{
-      color: $grey;
-    }
-
-    &:focus {
-      &:not(:active) {
-        //box-shadow: 0px 0px 5px 0.5px #d32e79;
-      }
+    &:hover {
+      color: $light-invert;
     }
 
     & > span {
@@ -262,6 +219,10 @@ export default class Sharing extends Vue {
       align-items: center;
     }
   }
+
+  // .has-addons {
+  //   justify-content: right;
+  // }
 
   &__tooltip {
     width: 100%;
@@ -286,18 +247,11 @@ export default class Sharing extends Vue {
       align-items: center;
     }
 
-    &.is-light  {
+    &.is-light {
       .tooltip-content {
         background-color: $white;
       }
     }
   }
-
-  .share__root{
-    &:hover {
-      color: $primary;
-    }
-  }
-
 }
 </style>

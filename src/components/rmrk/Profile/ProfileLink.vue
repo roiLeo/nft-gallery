@@ -1,6 +1,6 @@
 <template>
   <div>
-    <LinkResolver class="profile-link__wrapper" route="profile" :param="address" link="u">
+    <LinkResolver class="profile-link__wrapper" :route="linkedTo" :param="address" link="u">
       <Identity :address="address" :inline="true" :verticalAlign="true" />
       <template v-slot:extra>
         <a :href="`https://kusama.subscan.io/account/${address}`" target="_blank" rel="noopener noreferrer">
@@ -10,31 +10,33 @@
         </a>
       </template>
     </LinkResolver>
-    <template v-if="showTwitter">
-      <Identity :address="address" :inline="true" :showTwitter="showTwitter" :verticalAlign="true" />
-    </template>
+    <Identity v-if="showTwitter" :address="address" :showTwitter="showTwitter" :verticalAlign="false" class="pt-2" />
   </div>
 </template>
 
 <script lang="ts" >
-import { Component, Prop, Mixins } from 'vue-property-decorator';
-import InlineMixin from '@/utils/mixins/inlineMixin';
+import { Component, Prop, Mixins } from 'vue-property-decorator'
+import InlineMixin from '@/utils/mixins/inlineMixin'
 
 const components = {
   Identity: () => import('@/components/shared/format/Identity.vue'),
   LinkResolver: () => import('@/components/shared/LinkResolver.vue')
-};
+}
 
 @Component({ components })
 export default class ProfileLink extends Mixins(InlineMixin) {
   @Prop() public address!: string;
   @Prop() public showTwitter!: boolean;
+
+  get linkedTo(): string {
+    return this.$route.name === 'profile' ? 'subscan' : 'profile'
+  }
 }
 </script>
 
 <style scoped>
 .subscan__less-margin {
-  margin: auto 0.5em;
+  margin: auto .5em auto 0;
 }
 
 .profile-link__wrapper {

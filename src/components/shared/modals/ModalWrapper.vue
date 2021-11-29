@@ -2,7 +2,6 @@
   <div>
     <slot name="trigger" v-bind:handleOpen="handleOpen">
       <b-button
-        class="button"
         :type="buttonType"
         :icon-left="icon"
         :expanded="expanded"
@@ -16,7 +15,7 @@
       <div class="card">
         <header class="card-header">
           <p class="card-header-title">
-            {{ label }}
+            {{ label || title }}
           </p>
         </header>
         <div class="card-content">
@@ -28,23 +27,24 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Prop, Watch } from 'vue-property-decorator';
+import { Component, Vue, Prop } from 'vue-property-decorator'
 
 @Component
 export default class ModalWrapper extends Vue {
   @Prop(String) public label!: string;
+  @Prop(String) public title!: string;
   @Prop(String) public icon!: string;
   @Prop(String) public type!: string;
   @Prop(Boolean) public expanded!: boolean;
   @Prop(Boolean) public isRight!: boolean;
-  private isModalActive: boolean = false;
+  private isModalActive = false;
 
   get buttonType() {
-    return this.type || 'is-primary';
+    return this.type || 'is-primary'
   }
 
   protected handleOpen() {
-    this.isModalActive = true;
+    this.isModalActive = true
   }
 }
 </script>

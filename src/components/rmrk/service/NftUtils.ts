@@ -1,25 +1,28 @@
-import { hexToString, isHex } from '@polkadot/util';
-import { RmrkEvent, RMRK, RmrkInteraction } from '../types';
+import { hexToString, isHex } from '@polkadot/util'
+import { RmrkEvent, RMRK, RmrkInteraction } from '../types'
 import { SQUARE } from '../utils'
 import { generateId } from '../service/Consolidator'
-import { Collection, NFT, NFTWithMeta, SimpleNFT } from './scheme';
-import slugify from 'slugify';
-import { RmrkWithMetaType } from './scheme';
+import { Collection, NFT, NFTWithMeta, SimpleNFT } from './scheme'
+import slugify from 'slugify'
+import { RmrkWithMetaType } from './scheme'
 
 export type MintType = {
   collection: Collection
   nfts: NFT[]
 }
 
+export type UpdateFunction = (name: string, index: number) => string
+export const basicUpdateFunction = (name: string, index: number): string => `${name} #${index + 1}`
+
 class NFTUtils {
   public static decode(value: string) {
-    return decodeURIComponent(value);
+    return decodeURIComponent(value)
   }
 
   public static decodeRmrk(rmrkString: string): string {
     return NFTUtils.decode(
       isHex(rmrkString) ? hexToString(rmrkString) : rmrkString
-    );
+    )
   }
 
   public static convert(rmrkString: string): RMRK {
@@ -28,12 +31,12 @@ class NFTUtils {
         event: NFTUtils.getAction(rmrkString),
         view: NFTUtils.unwrap(rmrkString)
       }
-    } catch(e) {
+    } catch (e) {
       throw e
     }
   }
 
-  public static toString(rmrkType: NFT | Collection, version: string = '1.0.0'): string {
+  public static toString(rmrkType: NFT | Collection, version = '1.0.0'): string {
     if (NFTUtils.isCollection(rmrkType)) {
       return NFTUtils.encodeCollection(rmrkType, version)
     }
@@ -48,7 +51,7 @@ class NFTUtils {
   public static encodeCollection(collection: Collection, version: string) {
     return `RMRK::MINT::${version}::${encodeURIComponent(
       JSON.stringify(collection)
-    )}`;
+    )}`
   }
 
   public static encodeNFT(nft: NFT, version: string) {
@@ -57,22 +60,21 @@ class NFTUtils {
     )}`
   }
 
-  public static createInteraction(action: 'SEND' | 'CONSUME' | 'LIST' | 'BUY' | 'EMOTE', version: string = '1.0.0', objectId: string, meta: string) {
+  public static createInteraction(action: 'SEND' | 'CONSUME' | 'LIST' | 'BUY' | 'EMOTE', version = '1.0.0', objectId: string, meta: string) {
     if (!objectId) {
       throw new ReferenceError(`[${action}] Could not create, because nftId`)
     }
 
-    return `RMRK::${action}::${version}::${objectId}${
-      meta ? '::' + meta : ''
-    }`;
+    return `RMRK::${action}::${version}::${objectId}${meta ? '::' + meta : ''
+    }`
   }
 
 
-  public static collectionFromNFT(symbol: string, nft: NFT, version: string = '1.0.0'): Collection {
+  public static collectionFromNFT(symbol: string, nft: NFT, version = '1.0.0'): Collection {
     return NFTUtils.createCollection(nft.currentOwner, symbol, nft.name, nft.metadata, 1, version)
   }
 
-  public static createCollection(caller: string, symbol: string, name: string, metadata: string, max: number = 1, version: string = '1.0.0') {
+  public static createCollection(caller: string, symbol: string, name: string, metadata: string, max = 1, version = '1.0.0') {
     const trimmedSymbol = slugify(symbol.trim().toUpperCase(), '_')
     return {
       id: generateId(caller, trimmedSymbol),
@@ -92,6 +94,7 @@ class NFTUtils {
     const collectionId = generateId(caller, trimmedSymbol)
     const sn = NFTUtils.nftSerialNumber(index)
     return {
+      events: [],
       name: name.trim(),
       instance,
       transferable: 1,
@@ -104,8 +107,8 @@ class NFTUtils {
     }
   }
 
-  public static createMultipleNFT(max: number, caller: string, symbol: string, name: string, metadata: string, offset: number = 0): NFT[] {
-    return Array(max).fill(null).map((e, i) => NFTUtils.createNFT(caller, i + offset, symbol, name, metadata))
+  public static createMultipleNFT(max: number, caller: string, symbol: string, name: string, metadata: string, offset = 0, updateName?: UpdateFunction): NFT[] {
+    return Array(max).fill(null).map((e, i) => NFTUtils.createNFT(caller, i + offset, symbol, updateName ? updateName(name, i) : name, metadata))
   }
 
   public static upperTrim(name: string, slug?: boolean) {
@@ -113,16 +116,16 @@ class NFTUtils {
     return slug ? slugify(result, '_') : result
   }
 
-  public static nftSerialNumber(index: number, offset: number = 0, plusOne: boolean = true) {
-    return String(index + offset + Number(plusOne)).padStart(16, '0');
+  public static nftSerialNumber(index: number, offset = 0, plusOne = true) {
+    return String(index + offset + Number(plusOne)).padStart(16, '0')
   }
 
   public static isCollection(object: Collection | NFT | RmrkWithMetaType): object is Collection {
-    return 'issuer' in object && 'symbol' in object;
+    return 'issuer' in object && 'symbol' in object
   }
 
   public static isNFT(object: Collection | NFT | RmrkWithMetaType): object is NFT | NFTWithMeta {
-    return 'currentOwner' in object && 'instance' in object;
+    return 'currentOwner' in object && 'instance' in object
   }
 
   public static decodeAndConvert(rmrkString: string) {
@@ -130,9 +133,9 @@ class NFTUtils {
   }
 
 
-  public static generateRemarks(mint: SimpleNFT, caller: string, version: string = '1.0.0', encode?: boolean): MintType | string[] {
-    const collection = NFTUtils.createCollection(caller, mint.symbol, mint.name, mint.metadata, mint.max, version);
-    const nfts = Array(mint.max).fill(null).map((e, i) => NFTUtils.createNFT(caller, i, mint.symbol, mint.name, mint.metadata))
+  public static generateRemarks(mint: SimpleNFT, caller: string, version = '1.0.0', encode?: boolean, updateName?: UpdateFunction): MintType | string[] {
+    const collection = NFTUtils.createCollection(caller, mint.symbol, mint.name, mint.metadata, mint.max, version)
+    const nfts = Array(mint.max).fill(null).map((e, i) => NFTUtils.createNFT(caller, i, mint.symbol, updateName ? updateName(mint.name, i) : mint.name, mint.metadata))
 
     if (encode) {
       return [NFTUtils.encodeCollection(collection, version), ...nfts.map(nft => NFTUtils.encodeNFT(nft, version))]
@@ -144,7 +147,7 @@ class NFTUtils {
     }
   }
 
-  public static getAction = (rmrkString: string): RmrkEvent  => {
+  public static getAction = (rmrkString: string): RmrkEvent => {
     if (RmrkActionRegex.MINT.test(rmrkString)) {
       return RmrkEvent.MINT
     }
@@ -177,12 +180,12 @@ class NFTUtils {
       return RmrkEvent.EMOTE
     }
 
-    throw new EvalError(`[NFTUtils] Unable to get action from ${rmrkString}`);
+    throw new EvalError(`[NFTUtils] Unable to get action from ${rmrkString}`)
 
   }
 
   public static unwrap(rmrkString: string): any {
-    const rr: RegExp = /{.*}/
+    const rr = /{.*}/
     const match = rmrkString.match(rr)
 
     if (match) {
