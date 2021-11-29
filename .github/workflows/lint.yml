@@ -2,9 +2,9 @@ name: Lint Files
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, main-nuxt ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, main-nuxt ]
 
 jobs:
   lint:
@@ -21,5 +21,17 @@ jobs:
       - name: Install Dependencies
         run: yarn
 
-      - name: Lint Code
-        run: yarn lint
+      - name: Annotate Code Linting Results
+        uses: ataylorme/eslint-annotate-action@1.2.0
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          report-json: "eslint_report.json"
+
+      - name: Run Code Lint report
+        run: yarn lint:report
+
+      - name: Upload ESLint report
+        uses: actions/upload-artifact@v2
+        with:
+          name: eslint_report.json
+          path: eslint_report.json
