@@ -13,5 +13,6 @@ jobs:
         with:
           level: error
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review
+          reporter: github-check
           eslint_flags: "--quiet --ignore-path .gitignore --ext .js,.ts,.vue ."
+          filter_mode: nofilter
