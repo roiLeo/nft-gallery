@@ -1,5 +1,7 @@
 name: reviewdog
 on:
+  push:
+    branches: [ main-nuxt ]
   pull_request:
     branches: [ main-nuxt ]
 jobs:
@@ -12,8 +14,11 @@ jobs:
         with:
           node-version: '16'
       - name: Run eslint with reviewdog
-        uses: reviewdog/action-eslint@v1.0.0
+        uses: reviewdog/action-eslint@v1.14.0
         with:
           level: error
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-check
+          reporter: github-pr-review
+          eslint_flags: "--quiet --ignore-path .gitignore --ext .js,.ts,.vue ."
+          fail_on_error: true
+          filter_mode: nofilter
