@@ -3,6 +3,9 @@ For ease of testing we need some pointers with collections and NFTs with real ev
 
 Let's add items/views/collections which would be handy for fast testing without waiting queries to resolve
 
+# Profile
+- Ai Art has lot of interactions https://kodadot.xyz/rmrk/collection/7a147cba01afccbf17-GA  /rmrk/u/H79JDk7qX3KuhNHHwooRuy9g5LLRxezvof8Mihu4AhRGEsB
+
 # Collection
 - with most BUY events -- GenerativeAsterism -- https://kodadot.xyz/rmrk/collection/7a147cba01afccbf17-GA /rmrk/collection/7a147cba01afccbf17-GA
 
@@ -19,6 +22,10 @@ Let's add items/views/collections which would be handy for fast testing without 
 
 # SVG NFTs
 - https://kodadot.xyz/rmrk/u/FqCJeGcPidYSsvvmT17fHVaYdE2nXMYgPsBn3CP9gugvZR5?tab=collection /rmrk/u/FqCJeGcPidYSsvvmT17fHVaYdE2nXMYgPsBn3CP9gugvZR5?tab=collection
+
+# Collections with lot of BUYS
+- https://kodadot.xyz/rmrk/collection/32b209ecbe2b33dd24-DINOXEGGS - /rmrk/collection/32b209ecbe2b33dd24-DINOXEGGS
+- https://kodadot.xyz/rmrk/collection/dac5c7f54029d0e73c-YPGVT - /rmrk/collection/dac5c7f54029d0e73c-YPGVT
 
 ### Todo
 maybe add deploy preview url for easier clikcking whatever 

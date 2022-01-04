@@ -241,7 +241,13 @@
   "tooltip": {
     "symbol": "The symbol which is attributed to the NFT: for an example, Kusama is labeled as KSM",
     "name": "NFT will be visible under this name in gallery",
-    "edition": "Number of copies"
+    "edition": "Number of copies",
+    "created": "Created by",
+    "collections": "Collections created by",
+    "sold": "Nfts sold by",
+    "collected": "Nfts collected by",
+    "buy": "Show only nfts available for purchase",
+    "random": "Go to random page"
   },
   "nft": {
     "carbonless": "This NFT is carbonless",
@@ -327,13 +333,19 @@
     "balance": "Balance",
     "submit": "Submit",
     "remove": "Remove",
-    "correctAddress": "Correct address format"
+    "correctAddress": "Correct address format",
+    "copyUrl": "Copy URL"
   },
   "helper": {
     "noCollections": "You have no collections",
     "noInfinityCollections": "You have no collections with unlimited NFTs",
     "indexerReadOnly": "App is in read only mode, try reload app or visit Discord",
-    "clickToCreate": "Click here to create collection"
+    "clickToCreate": "Click here to create collection",
+    "urlToTransform": {
+      "label": "URL to transform",
+      "placeholder": "singular.rmrk.app/collectibles/",
+      "copy": "Kodadot link successfuly copied"
+    }
   },
   "action": {
     "admin": "Admin panel",
