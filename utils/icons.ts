@@ -1,7 +1,7 @@
 import Vue from 'vue'
 
 import {
-  faPaperPlane, faFileImage, faPlus,
+  faPaperPlane, faFileImage, faPlus, faMoon, faSun,
   faSync, faTimes,
   faTrash, faCloudDownloadAlt, faKey,
   faExternalLinkAlt, faUpload, faUsers,
@@ -38,7 +38,7 @@ import {
 import { library, IconDefinition } from '@fortawesome/fontawesome-svg-core'
 
 library.add(
-  faPaperPlane, faFileImage, faPlus,
+  faPaperPlane, faFileImage, faPlus, faMoon, faSun,
   faSync, faTimes,
   faCopy, faTrash, faCloudDownloadAlt,
   faKey, faExternalLinkAlt, faUpload,

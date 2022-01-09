@@ -185,6 +185,87 @@ body {
         padding: 0.75rem !important;
         }
     }
-
 }
+
+body[data-theme='light'] {
+    background-color: #fff;
+    // background-color: #f5f5f5;
+    color: #1f1f1f;
+
+    #__layout {
+        background-color: #fff;
+    }
+
+    .button {
+        text-transform: uppercase;
+        border-radius: 0;
+        font-weight: 500;
+        transition: all 0.3s;
+        color: #1f1f1f;
+
+        &.is-primary {
+            border-color: $primary;
+            background-color: #fff;
+            color: #1f1f1f;
+            &:hover,
+            &:focus {
+                border-color: $primary;
+                background-color: $primary;
+                color: #fff;
+            }
+        }
+    }
+
+	.pagination-link:not(.is-current) {
+		background-color: #fff;
+	}
+
+    .navbar {
+        background-color: #fff;
+        color: #1f1f1f;
+    }
+
+    .navbar-item, .navbar-link {
+        color: #1f1f1f;
+    }
+
+    .navbar-start .nuxt-link-active {
+        color: $primary;
+        background-color: #fff;
+    }
+
+	.modal-card-body,
+	.modal-card-body label,
+	.card,
+	.card label:not(.checkbox),
+	.field label:not(.switch):not(.b-radio) {
+		background-color: #fff;
+	}
+
+	.panel {
+		background-color: #fff;
+	}
+
+    .title, .card-header-title {
+        color: #1f1f1f !important;
+    }
+
+    .text {
+        &__stroked {
+            color: $primary;
+            -webkit-text-fill-color: #fff;
+        }
+    }
+    .homepage {
+        color: #1f1f1f;
+        background: #fff;
+    }
+    .homepage__box {
+        background-color: #f5f5f5;
+        @include desktop {
+            box-shadow: 28px -28px #f5f5f5, 28px -28px 0 4px $primary;
+        }
+    }
+}
+
 
