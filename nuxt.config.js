@@ -107,6 +107,7 @@ export default {
     // https://go.nuxtjs.dev/typescript
     '@nuxt/typescript-build',
     '@nuxtjs/google-analytics',
+    '@nuxtjs/color-mode',
     '@nuxtjs/pwa',
   ],
 
