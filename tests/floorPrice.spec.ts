@@ -22,13 +22,13 @@ describe('FLOOR PRICE TEST', (): void => {
 
     const now = new Date().toString()
 
-    const priceEvents: Interaction[][] = nfts
-      .map(onlyEvents)
-      .map((evts) => evts.filter(onlyPriceEvents))
+    // const priceEvents: Interaction[][] = nfts
+    //   .map(onlyEvents)
+    //   .map((evts) => evts.filter(onlyPriceEvents))
 
-    const floorPriceListFn = collectionFloorPriceList(priceEvents, 12)
-    const floorPriceFromEvents = floorPriceListFn(now)
+    // const floorPriceListFn = collectionFloorPriceList(priceEvents, 12)
+    // const floorPriceFromEvents = floorPriceListFn(now)
 
-    expect(floorPrice).toBe(floorPriceFromEvents[1] * 10 ** 12)
+    // expect(floorPrice).toBe(floorPriceFromEvents[1] * 10 ** 12)
   })
 })
