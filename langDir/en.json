@@ -557,6 +557,7 @@
     "user": "User",
     "created": "Created",
     "collected": "Collected",
+    "liked": "Liked",
     "sold": "Sold",
     "holdings": "Holdings",
     "showQr": "Show QR"

@@ -159,6 +159,24 @@
             :account="id"
             showSearchBar />
         </b-tab-item>
+        <b-tab-item value="Liked">
+          <template #header>
+            <b-tooltip
+              :label="`${$t('tooltip.Liked')} ${labelDisplayName}`"
+              append-to-body>
+              {{ $t('profile.liked') }}
+              <span class="tab-counter" v-if="totalLiked">{{
+                totalLiked
+              }}</span>
+            </b-tooltip>
+          </template>
+          <PaginatedCardList
+            :id="id"
+            :query="nftListLiked"
+            @change="totalLiked = $event"
+            :account="id"
+            showSearchBar />
+        </b-tab-item>
         <b-tab-item value="holdings">
           <template #header>
             <b-tooltip
@@ -184,6 +202,7 @@ import shouldUpdate from '@/utils/shouldUpdate'
 import shortAddress from '@/utils/shortAddress'
 import nftListByIssuer from '@/queries/nftListByIssuer.graphql'
 import nftListCollected from '@/queries/nftListCollected.graphql'
+import nftListLiked from '@/queries/nftListLiked.graphql'
 import nftListSold from '@/queries/nftListSold.graphql'
 import firstNftByIssuer from '@/queries/firstNftByIssuer.graphql'
 import PrefixMixin from '@/utils/mixins/prefixMixin'
@@ -246,6 +265,7 @@ export default class Profile extends mixins(PrefixMixin) {
   protected totalCollections = 0
   protected totalCreated = 0
   protected totalCollected = 0
+  protected totalLiked = 0
   protected totalSold = 0
   protected networks = [
     {
@@ -272,6 +292,7 @@ export default class Profile extends mixins(PrefixMixin) {
 
   readonly nftListByIssuer = nftListByIssuer
   readonly nftListCollected = nftListCollected
+  readonly nftListLiked = nftListLiked
   readonly nftListSold = nftListSold
 
   public async mounted() {

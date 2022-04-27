@@ -1,0 +1,17 @@
+#import "./fragments/nft.graphql"
+#import "./fragments/nftDetails.graphql"
+
+query nftListLiked(
+  $account: String!
+) {
+  emotes(
+    filter: { caller: { equalTo: $account } }
+    orderBy: [UPDATED_AT_DESC]
+  ) {
+    totalCount
+		nft{
+			...nft
+			...nftDetails
+		}
+  }
+}
