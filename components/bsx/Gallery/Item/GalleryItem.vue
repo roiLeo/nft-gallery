@@ -25,9 +25,7 @@
     <template v-slot:main>
       <div class="columns">
         <div class="column is-6">
-          <div class="nft-title mb-3">
-            <Name :nft="nft" :isLoading="isLoading" />
-          </div>
+          <Name :nft="nft" :isLoading="isLoading" class="mb-5" />
 
           <div v-if="meta.description" class="block">
             <p class="label">{{ $t('legend') }}</p>
