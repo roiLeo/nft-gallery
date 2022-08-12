@@ -1,17 +1,7 @@
 <template>
   <div class="gallery container">
     <Loader :value="isLoading" />
-    <!-- TODO: Make it work with graphql -->
     <Search v-bind.sync="searchQuery" @resetPage="resetPage" hideSearchInput>
-      <template v-slot:next-filter>
-        <b-switch
-          v-if="isLogIn"
-          class="gallery-switch"
-          v-model="hasPassionFeed"
-          :rounded="false">
-          Passion Feed
-        </b-switch>
-      </template>
       <Pagination
         hasMagicBtn
         simple
@@ -57,7 +47,10 @@
                 <span
                   v-if="nft.price > 0 && showPriceValue"
                   class="card-image__price">
-                  <Money :value="nft.price" inline />
+                  <Money
+                    :value="nft.price"
+                    inline
+                    :data-cy="results.indexOf(nft)" />
                 </span>
               </div>
 
@@ -102,7 +95,7 @@ import {
 } from '@/utils/cachingStrategy'
 import { getDenyList } from '@/utils/prefix'
 import { fastExtract } from '@/utils/ipfs'
-import { logError, mapNFTorCollectionMetadata, mapToId } from '@/utils/mappers'
+import { logError, mapNFTorCollectionMetadata } from '@/utils/mappers'
 import {
   NFTEntitiesWithCount,
   NFTWithCollectionMeta,
@@ -119,7 +112,7 @@ import resolveQueryPath from '~/utils/queryPathResolver'
 import { unwrapSafe } from '~/utils/uniquery'
 import { notificationTypes, showNotification } from '@/utils/notification'
 
-import passionQuery from '@/queries/rmrk/subsquid/passionFeed.graphql'
+// import passionQuery from '@/queries/rmrk/subsquid/passionFeed.graphql'
 
 type GraphResponse = NFTEntitiesWithCount<GraphNFT>
 
@@ -148,44 +141,25 @@ export default class Gallery extends mixins(
 ) {
   private nfts: NFTWithCollectionMeta[] = []
   private searchQuery: SearchQuery = {
-    search: this.$route.query?.search?.toString() || '',
-    type: '',
-    listed: true,
-    owned: true,
+    search: this.$route.query?.search?.toString() ?? '',
+    type: this.$route.query?.type?.toString() ?? '',
+    sortByMultiple: this.$route.query?.sort?.toString()
+      ? [this.$route.query?.sort?.toString()]
+      : undefined,
+    listed: this.$route.query?.listed?.toString() === 'true',
+    owned: this.$route.query?.owned?.toString() === 'true',
     priceMin: undefined,
     priceMax: undefined,
-    sortByMultiple: ['BLOCK_NUMBER_DESC'],
   }
-  private isLoading = true
-  private hasPassionFeed = false
-  private passionList: string[] = []
+  protected isLoading = true
+  // private hasPassionFeed = false
+  // private passionList: string[] = []
 
   get showPriceValue(): boolean {
     return (
       this.searchQuery?.listed ||
       this.$store.getters['preferences/getShowPriceValue']
     )
-  }
-
-  get isRmrk(): boolean {
-    return this.urlPrefix === 'rmrk' || this.urlPrefix === 'westend'
-  }
-
-  get getLoadAllArtwork(): boolean {
-    return this.$store.getters['preferences/getLoadAllArtwork']
-  }
-
-  get queryVariables() {
-    return {
-      first: this.first,
-      denyList: getDenyList(this.urlPrefix),
-      orderBy: this.isRmrk
-        ? this.searchQuery.sortByMultiple
-        : ['blockNumber_DESC'],
-      search: this.buildSearchParam(),
-      priceMin: this.searchQuery.priceMin,
-      priceMax: this.searchQuery.priceMax,
-    }
   }
 
   set currentValue(page: number) {
@@ -209,17 +183,6 @@ export default class Gallery extends mixins(
     this.onResize()
   }
 
-  async mounted() {
-    // only fetch passionFeed if logged in
-    if (this.isLogIn) {
-      try {
-        await this.fetchPassionList()
-      } catch (e) {
-        showNotification((e as Error).message, notificationTypes.danger)
-      }
-    }
-  }
-
   @Debounce(500)
   private resetPage() {
     this.gotoPage(1)
@@ -240,19 +203,17 @@ export default class Gallery extends mixins(
       return false
     }
     this.isFetchingData = true
-    const query = await resolveQueryPath(this.urlPrefix, 'nftListWithSearch')
+    const query = await resolveQueryPath(this.client, 'nftListWithSearch')
 
-    if (this.hasPassionFeed) {
-      await this.fetchPassionList()
-    }
+    // if (this.hasPassionFeed) {
+    //   await this.fetchPassionList()
+    // }
     const result = await this.$apollo.query({
       query: query.default,
-      client: this.urlPrefix,
+      client: this.client,
       variables: {
         denyList: getDenyList(this.urlPrefix),
-        orderBy: this.isRmrk
-          ? this.searchQuery.sortByMultiple
-          : ['blockNumber_DESC'],
+        orderBy: this.searchQuery.sortByMultiple,
         search: this.buildSearchParam(),
         priceMin: this.searchQuery.priceMin,
         priceMax: this.searchQuery.priceMax,
@@ -265,30 +226,17 @@ export default class Gallery extends mixins(
     return true
   }
 
-  public async fetchPassionList() {
-    const {
-      data: { passionFeed },
-    } = await this.$apollo.query({
-      query: passionQuery,
-      client: 'subsquid', // TODO: change to usable value
-      variables: {
-        account: this.accountId,
-      },
-    })
-    this.passionList = passionFeed?.map(mapToId) || []
-
-    // only show passion feed if it has some length
-    if (this.passionList.length > 5) {
-      this.hasPassionFeed = true
-    }
-  }
-
   protected async handleResult(
-    { data }: WithData<GraphResponse>,
+    {
+      data,
+    }: WithData<
+      GraphResponse & { nftEntitiesConnection: { totalCount: number } }
+    >,
     loadDirection = 'down'
   ) {
     const { nFTEntities } = data
-    this.total = nFTEntities.totalCount
+    this.total =
+      nFTEntities.totalCount || data.nftEntitiesConnection?.totalCount
 
     const newNfts = unwrapSafe(nFTEntities).map((e: any) => ({
       ...e,
@@ -330,17 +278,15 @@ export default class Gallery extends mixins(
 
   public async prefetchPage(offset: number, prefetchLimit: number) {
     try {
-      const query = await resolveQueryPath(this.urlPrefix, 'nftListWithSearch')
+      const query = await resolveQueryPath(this.client, 'nftListWithSearch')
       const nfts = this.$apollo.query({
         query: query.default,
-        client: this.urlPrefix,
+        client: this.client,
         variables: {
           first: this.first,
           offset,
           denyList: getDenyList(this.urlPrefix),
-          orderBy: this.isRmrk
-            ? this.searchQuery.sortByMultiple
-            : ['blockNumber_DESC'],
+          orderBy: this.searchQuery.sortByMultiple,
           search: this.buildSearchParam(),
           priceMin: this.searchQuery.priceMin,
           priceMax: this.searchQuery.priceMax,
@@ -366,41 +312,31 @@ export default class Gallery extends mixins(
 
   private buildSearchParam(): Record<string, unknown>[] {
     const params: any[] = []
-
     if (this.searchQuery.search) {
-      params.push({
-        name: { likeInsensitive: `%${this.searchQuery.search}%` },
-      })
+      params.push({ name_containsInsensitive: this.searchQuery.search })
     }
 
-    if (
-      this.searchQuery.priceMin == undefined &&
-      this.searchQuery.listed &&
-      this.isRmrk
-    ) {
-      params.push({
-        price: { greaterThan: '0' },
-      })
+    if (this.searchQuery.listed) {
+      const minPrice = this.searchQuery.priceMin ?? '0'
+      if (this.searchQuery.priceMax) {
+        params.push({
+          price_gt: '0',
+          price_gte: minPrice,
+          price_lte: this.searchQuery.priceMax,
+        })
+      } else {
+        params.push({
+          price_gt: '0',
+          price_gte: minPrice,
+        })
+      }
     }
 
-    if (
-      this.searchQuery.priceMin != undefined &&
-      this.searchQuery.listed &&
-      this.isRmrk
-    ) {
-      params.push({
-        price: {
-          greaterThan: this.searchQuery.priceMin,
-          lessThanOrEqualTo: this.searchQuery.priceMax,
-        },
-      })
-    }
-
-    if (this.hasPassionFeed) {
-      params.push({
-        issuer: { in: this.passionList },
-      })
-    }
+    // if (this.hasPassionFeed) {
+    //   params.push({
+    //     issuer: { in: this.passionList },
+    //   })
+    // }
 
     return params
   }
@@ -413,14 +349,14 @@ export default class Gallery extends mixins(
     }
   }
 
-  @Watch('hasPassionFeed')
-  protected async onHasPassionFeed() {
-    try {
-      this.resetPage()
-    } catch (e) {
-      showNotification((e as Error).message, notificationTypes.danger)
-    }
-  }
+  // @Watch('hasPassionFeed')
+  // protected async onHasPassionFeed() {
+  //   try {
+  //     this.resetPage()
+  //   } catch (e) {
+  //     showNotification((e as Error).message, notificationTypes.danger)
+  //   }
+  // }
 
   @Watch('searchQuery', { deep: true })
   protected onSearchQueryChange() {

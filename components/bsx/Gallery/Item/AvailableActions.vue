@@ -4,30 +4,39 @@
     <ActionList
       v-if="accountId"
       :actions="actions"
-      :isMakeOffersAllowed="!isMakeOffersDisabled"
-      :tooltipOfferLabel="tooltipOfferLabel"
+      :price="price"
+      :disabledToolTips="toolTips"
       @click="handleAction" />
     <component
+      ref="balanceInput"
       class="mb-4"
       v-if="showMeta"
+      :min="minimumLimit"
+      :max="maximumLimit"
       :is="showMeta"
       @input="updateMeta"
       emptyOnError />
-    <SubmitButton v-if="showSubmit" @click="submit">
-      {{ $t('nft.action.submit', [selectedAction]) }}
+    <DaySelect v-if="showDaySelect" v-model="selectedDay" :days="dayList" />
+    <SubmitButton
+      v-if="showSubmit"
+      @click="submit"
+      :disabled="disableSubmitButton">
+      {{ $t('nft.action.submit', [$t(`nft.event.${selectedAction}`)]) }}
     </SubmitButton>
   </div>
 </template>
 
 <script lang="ts">
+import BalanceInput from '@/components/shared/BalanceInput.vue'
+import AddressInput from '@/components/shared/AddressInput.vue'
 import { NFTAction } from '@/components/unique/NftUtils'
 import { createTokenId } from '@/components/unique/utils'
-import { isSameAccount } from '@/utils/account'
 import { bsxParamResolver, getApiCall } from '@/utils/gallery/abstractCalls'
 import AuthMixin from '@/utils/mixins/authMixin'
 import KeyboardEventsMixin from '@/utils/mixins/keyboardEventsMixin'
 import MetaTransactionMixin from '@/utils/mixins/metaMixin'
 import PrefixMixin from '@/utils/mixins/prefixMixin'
+import UseApiMixin from '@/utils/mixins/useApiMixin'
 import { notificationTypes, showNotification } from '@/utils/notification'
 import { unpin } from '@/utils/proxy'
 import {
@@ -35,19 +44,20 @@ import {
   getActionList,
   iconResolver,
   ShoppingActions,
+  ShoppingActionToolTips,
 } from '@/utils/shoppingActions'
 import shouldUpdate from '@/utils/shouldUpdate'
-import Connector from '@kodadot1/sub-api'
+import { onApiConnect } from '@kodadot1/sub-api'
 import { Component, mixins, Prop } from 'nuxt-property-decorator'
-import formatBalance from '@/utils/formatBalance'
-import onApiConnect from '@/utils/api/general'
+import { formatBsxBalanceToNumber } from '~/utils/format/balance'
 
 const components = {
-  ActionList: () => import('@/components/rmrk/Gallery/Item/ActionList.vue'),
+  ActionList: () => import('@/components/bsx/Gallery/Item/ActionList.vue'),
   AddressInput: () => import('@/components/shared/AddressInput.vue'),
   BalanceInput: () => import('@/components/shared/BalanceInput.vue'),
   SubmitButton: () => import('@/components/base/SubmitButton.vue'),
   Loader: () => import('@/components/shared/Loader.vue'),
+  DaySelect: () => import('@/components/bsx/Offer/DaySelect.vue'),
 }
 
 @Component({ components })
@@ -55,42 +65,54 @@ export default class AvailableActions extends mixins(
   PrefixMixin,
   KeyboardEventsMixin,
   MetaTransactionMixin,
-  AuthMixin
+  AuthMixin,
+  UseApiMixin
 ) {
   @Prop(String) public currentOwnerId!: string
   @Prop() public price!: string
   @Prop(String) public nftId!: string
   @Prop(String) public collectionId!: string
   @Prop(Boolean) public isMakeOffersAllowed!: boolean
+  @Prop(Boolean) public isBuyAllowed!: boolean
+  @Prop(Boolean) public isOwner!: boolean
   @Prop({ type: Array, default: () => [] }) public ipfsHashes!: string[]
 
   private selectedAction: ShoppingActions | '' = ''
   private meta: string | number = ''
-
   public minimumOfferAmount = 0
   public isMakeOffersDisabled = true
-  public tooltipOfferLabel = {}
+  public isBalanceInputValid = false
+  public selectedDay = 14
+  public dayList = [1, 3, 7, 14, 30]
 
   get balance(): number {
-    return Number(this.$store.getters.getAuthBalance)
+    return formatBsxBalanceToNumber(this.$store.getters.getAuthBalance)
   }
 
   get actions() {
     return getActionList('bsx', this.isOwner, this.isAvailableToBuy)
   }
 
-  get isOwner(): boolean {
-    this.$consola.log(
-      '{ currentOwnerId, accountId }',
-      this.currentOwnerId,
-      this.accountId
-    )
+  get minimumLimit(): number {
+    if (this.selectedAction === ShoppingActions.MAKE_OFFER) {
+      return this.minimumOfferAmount
+    }
+    return 0
+  }
 
-    return Boolean(
-      this.currentOwnerId &&
-        this.accountId &&
-        isSameAccount(this.currentOwnerId, this.accountId)
-    )
+  get maximumLimit(): number | undefined {
+    if (this.selectedAction === ShoppingActions.LIST) {
+      return undefined
+    }
+    return this.balance
+  }
+
+  get disableSubmitButton() {
+    if (this.selectedAction === ShoppingActions.MAKE_OFFER) {
+      return !this.isBalanceInputValid
+    }
+
+    return false
   }
 
   get showSubmit() {
@@ -110,25 +132,32 @@ export default class AvailableActions extends mixins(
   }
 
   public async created(): Promise<void> {
-    onApiConnect(() => {
-      const { api } = Connector.getInstance()
-      this.minimumOfferAmount = parseFloat(
-        formatBalance(
-          api?.consts?.marketplace?.minimumOfferAmount?.toString(),
-          12,
-          false
-        ).replace(/,/g, '')
+    onApiConnect(this.apiUrl, (api) => {
+      this.minimumOfferAmount = formatBsxBalanceToNumber(
+        api?.consts?.marketplace?.minimumOfferAmount?.toString()
       )
-
       this.isMakeOffersDisabled =
         !this.isMakeOffersAllowed || this.minimumOfferAmount > this.balance
-
-      if (!this.isMakeOffersAllowed) {
-        this.tooltipOfferLabel = this.$t('tooltip.makeOfferDisabled')
-      } else if (this.minimumOfferAmount > this.balance) {
-        this.tooltipOfferLabel = this.$t('tooltip.makeOfferNotEnoughBalance')
-      }
     })
+  }
+
+  get toolTips(): ShoppingActionToolTips {
+    const toolTips = {}
+    if (!this.isMakeOffersAllowed) {
+      toolTips[ShoppingActions.MAKE_OFFER] = this.$t(
+        'tooltip.makeOfferDisabled'
+      ).toString()
+    } else if (this.minimumOfferAmount > this.balance) {
+      toolTips[ShoppingActions.MAKE_OFFER] = this.$t(
+        'tooltip.notEnoughBalance'
+      ).toString()
+    }
+    if (!this.isBuyAllowed) {
+      toolTips[ShoppingActions.BUY] = this.$t(
+        'tooltip.notEnoughBalance'
+      ).toString()
+    }
+    return toolTips
   }
 
   protected iconType(value: string) {
@@ -144,6 +173,10 @@ export default class AvailableActions extends mixins(
     }
   }
 
+  get showDaySelect(): boolean {
+    return this.selectedAction === ShoppingActions.MAKE_OFFER
+  }
+
   get isAvailableToBuy(): boolean {
     const { price, accountId } = this
     return Boolean(accountId && Number(price) > 0)
@@ -153,13 +186,32 @@ export default class AvailableActions extends mixins(
     return this.selectedAction === ShoppingActions.CONSUME
   }
 
+  unlistNft() {
+    this.selectedAction = ShoppingActions.LIST
+    this.meta = 0
+    this.submit()
+  }
+
   protected updateMeta(value: string | number) {
+    const balanceInputComponent = this.$refs.balanceInput as
+      | AddressInput
+      | BalanceInput
+    if (
+      balanceInputComponent &&
+      balanceInputComponent instanceof BalanceInput
+    ) {
+      this.isBalanceInputValid = balanceInputComponent.checkValidity()
+      // ad-hoc fix for empty input value
+      if (this.meta === '0') {
+        this.isBalanceInputValid = false
+      }
+    }
     this.$consola.log(typeof value, value)
     this.meta = value
   }
 
   protected async submit() {
-    const { api } = Connector.getInstance()
+    const api = await this.useApi()
     this.initTransactionLoader()
 
     try {
@@ -168,9 +220,14 @@ export default class AvailableActions extends mixins(
         throw new EvalError('Action or Collection not found')
       }
 
-      showNotification(`[${this.selectedAction}] ${this.nftId}`)
+      showNotification(`[${this.selectedAction}] NFT: ${this.nftId}`)
       let cb = getApiCall(api, this.urlPrefix, this.selectedAction)
-      let arg: any[] = this.getArgs()
+      let expiration: number | undefined = undefined
+      if (this.selectedAction === ShoppingActions.MAKE_OFFER) {
+        const currentBlock = await api.query.system.number()
+        expiration = this.getExpiration(currentBlock.toNumber())
+      }
+      let arg: any[] = this.getArgs(expiration)
 
       this.howAboutToExecute(
         this.accountId,
@@ -186,7 +243,7 @@ export default class AvailableActions extends mixins(
             `[${this.selectedAction}] ${this.nftId}`,
             notificationTypes.success
           )
-          this.$emit('change')
+          this.$emit('change', this.selectedAction)
           this.selectedAction = ''
         },
         () => {
@@ -200,17 +257,25 @@ export default class AvailableActions extends mixins(
     }
   }
 
-  protected getArgs(): any[] {
+  protected getArgs(expiration?: number): any[] {
     const { selectedAction, collectionId, nftId, currentOwnerId, meta } = this
-
-    console.log(collectionId, nftId)
 
     return bsxParamResolver(
       createTokenId(collectionId, nftId),
       selectedAction,
       meta,
-      currentOwnerId
+      currentOwnerId,
+      expiration
     )
+  }
+
+  protected getExpiration(currentBlock: number): number {
+    const BLOCK_OFFSET = 5 // time between submit & finalization
+    const BLOCK_PER_DAY_COUNT = 7200 // 7200 = 86400 / 12
+    const DAY_COUNT = this.selectedDay
+    const expiration =
+      currentBlock + BLOCK_OFFSET + BLOCK_PER_DAY_COUNT * DAY_COUNT
+    return expiration
   }
 
   protected unpinNFT() {

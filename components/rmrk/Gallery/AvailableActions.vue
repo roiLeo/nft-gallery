@@ -5,7 +5,7 @@
       <ShareNetwork
         v-if="identity && identity.twitter && this.isOwner"
         tag="button"
-        class="button is-info is-dark is-outlined is-fullwidth twitter-btn"
+        class="button is-info is-dark is-outlined is-fullwidth twitter-btn only-border-top"
         network="twitter"
         :hashtags="'KodaDot'"
         :url="realworldFullPath"
@@ -18,6 +18,7 @@
           v-for="action in actions"
           :key="action"
           :type="iconType(action)[0]"
+          class="only-border-top"
           outlined
           @click="handleAction(action)"
           expanded>
@@ -27,12 +28,14 @@
       <template v-else-if="isForSale">
         <b-tooltip :active="buyDisabled" :label="$t('tooltip.buyDisabled')">
           <b-button
+            class="only-border-top"
             :type="iconType(ShoppingActions.BUY)[0]"
             :disabled="buyDisabled || !isAvailableToBuy"
             style="border-width: 2px"
             outlined
             @click="handleAction(ShoppingActions.BUY)"
-            expanded>
+            expanded
+            data-cy="BUY">
             {{ replaceBuyNowWithYolo ? 'YOLO' : actionLabel('BUY') }}
           </b-button>
         </b-tooltip>
@@ -61,31 +64,30 @@
 </template>
 
 <script lang="ts">
-import { Component, mixins, Prop, Ref, Watch } from 'nuxt-property-decorator'
-import Connector from '@kodadot1/sub-api'
+import nftByIdMinimal from '@/queries/rmrk/subsquid/nftByIdMinimal.graphql'
+import { emptyObject } from '@/utils/empty'
+import { identityStore } from '@/utils/idbStore'
+import AuthMixin from '@/utils/mixins/authMixin'
+import KeyboardEventsMixin from '@/utils/mixins/keyboardEventsMixin'
+import MetaTransactionMixin from '@/utils/mixins/metaMixin'
+import PrefixMixin from '@/utils/mixins/prefixMixin'
+import RmrkVersionMixin from '@/utils/mixins/rmrkVersionMixin'
+import UseApiMixin from '@/utils/mixins/useApiMixin'
 import { notificationTypes, showNotification } from '@/utils/notification'
 import { unpin } from '@/utils/proxy'
-import { GenericAccountId } from '@polkadot/types/generic/AccountId'
-import RmrkVersionMixin from '@/utils/mixins/rmrkVersionMixin'
-import { somePercentFromTX } from '@/utils/support'
-import shouldUpdate from '@/utils/shouldUpdate'
-import nftById from '@/queries/nftById.graphql'
-import PrefixMixin from '~/utils/mixins/prefixMixin'
-import AuthMixin from '~/utils/mixins/authMixin'
-import KeyboardEventsMixin from '~/utils/mixins/keyboardEventsMixin'
-import MetaTransactionMixin from '~/utils/mixins/metaMixin'
-import { get } from 'idb-keyval'
-import { identityStore } from '@/utils/idbStore'
-import { emptyObject } from '~/utils/empty'
-import { isAddress } from '@polkadot/util-crypto'
-import { downloadImage } from '@/utils/download'
-import { createInteraction, JustInteraction } from '@kodadot1/minimark'
 import {
-  ShoppingActions,
-  KeyboardValueToActionMap,
+  getActionButtonLabelKey,
   getActions,
-  getActionButtonLabel,
+  KeyboardValueToActionMap,
+  ShoppingActions,
 } from '@/utils/shoppingActions'
+import shouldUpdate from '@/utils/shouldUpdate'
+import { somePercentFromTX } from '@/utils/support'
+import { createInteraction, JustInteraction } from '@kodadot1/minimark'
+import { GenericAccountId } from '@polkadot/types/generic/AccountId'
+import { isAddress } from '@polkadot/util-crypto'
+import { get } from 'idb-keyval'
+import { Component, mixins, Prop, Ref, Watch } from 'nuxt-property-decorator'
 import { TranslateResult } from 'vue-i18n/types'
 
 type Address = string | GenericAccountId | undefined
@@ -97,7 +99,6 @@ const iconResolver: Record<string, DescriptionTuple> = {
   [ShoppingActions.CONSUME]: ['is-danger'],
   [ShoppingActions.LIST]: ['is-light'],
   [ShoppingActions.BUY]: ['is-success is-dark'],
-  [ShoppingActions.DOWNLOAD]: ['is-warning'],
 }
 
 const components = {
@@ -112,12 +113,14 @@ export default class AvailableActions extends mixins(
   PrefixMixin,
   KeyboardEventsMixin,
   MetaTransactionMixin,
-  AuthMixin
+  AuthMixin,
+  UseApiMixin
 ) {
   @Prop() public currentOwnerId!: string
   @Prop() public originialOwner!: string
   @Prop() public price!: string
   @Prop() public nftId!: string
+  @Prop(Boolean) public isOwner!: boolean
   @Prop({ default: () => [] }) public ipfsHashes!: string[]
   @Prop({ default: false }) public buyDisabled!: boolean
   private selectedAction: ShoppingActions | '' = ''
@@ -208,11 +211,6 @@ export default class AvailableActions extends mixins(
         case ShoppingActions.SEND:
           this.addressInput?.focusInput()
           break
-        case ShoppingActions.DOWNLOAD: {
-          const { image, name } = this.currentGalleryItemImage
-          image && downloadImage(image, name)
-          break
-        }
         default:
           break
       }
@@ -236,20 +234,6 @@ export default class AvailableActions extends mixins(
 
   get isActionEmpty() {
     return this.selectedAction === ''
-  }
-
-  get isOwner(): boolean {
-    this.$consola.log(
-      '{ currentOwnerId, accountId }',
-      this.currentOwnerId,
-      this.accountId
-    )
-
-    return Boolean(
-      this.currentOwnerId &&
-        this.accountId &&
-        this.currentOwnerId === this.accountId
-    )
   }
 
   get isAvailableToBuy(): boolean {
@@ -291,10 +275,6 @@ export default class AvailableActions extends mixins(
     return `${window.location.origin}${this.$route.fullPath}`
   }
 
-  get currentGalleryItemImage(): { image: string; name: string } {
-    return this.$store.getters['history/getCurrentlyViewedItem'] || {}
-  }
-
   @Watch('originialOwner', { immediate: true })
   async watchOwnerAddress(newAddress: Address, oldAddress: Address) {
     if (shouldUpdate(newAddress, oldAddress)) {
@@ -316,15 +296,15 @@ export default class AvailableActions extends mixins(
 
   protected async checkBuyBeforeSubmit() {
     const nft = await this.$apollo.query({
-      query: nftById,
-      client: this.urlPrefix,
+      query: nftByIdMinimal,
+      client: this.client,
       variables: {
         id: this.nftId,
       },
     })
 
     const {
-      data: { nFTEntity },
+      data: { nft: nFTEntity },
     } = nft
 
     if (
@@ -342,7 +322,7 @@ export default class AvailableActions extends mixins(
   }
 
   protected async submit() {
-    const { api } = Connector.getInstance()
+    const api = await this.useApi()
     const rmrk = this.constructRmrk()
     this.isLoading = true
 
@@ -350,7 +330,7 @@ export default class AvailableActions extends mixins(
       if (this.isActionEmpty) {
         throw new ReferenceError('No action selected')
       }
-      showNotification(rmrk)
+      showNotification(`[${this.selectedAction}] NFT: ${this.nftId}`)
       this.$consola.log('submit', rmrk)
       const isBuy = this.isBuy
       const cb = isBuy ? api.tx.utility.batchAll : api.tx.system.remark
@@ -358,7 +338,7 @@ export default class AvailableActions extends mixins(
         ? [
             api.tx.system.remark(rmrk),
             api.tx.balances.transfer(this.currentOwnerId, this.price),
-            somePercentFromTX(this.price),
+            somePercentFromTX(api, this.price),
           ]
         : rmrk
 
@@ -413,12 +393,13 @@ export default class AvailableActions extends mixins(
     this.submit()
   }
 
-  protected actionLabel(value: ShoppingActions): TranslateResult {
-    return getActionButtonLabel(value, this)
+  protected actionLabel(action: ShoppingActions): TranslateResult {
+    return this.$t(getActionButtonLabelKey(action, this.price))
   }
 }
 </script>
 <style scoped lang="scss">
+@import '@/styles/border';
 .joy {
   font-size: 16px;
   margin-top: 2px;

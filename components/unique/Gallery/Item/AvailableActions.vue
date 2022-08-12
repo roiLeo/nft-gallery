@@ -9,6 +9,7 @@
         :type="iconType(action)[0]"
         outlined
         expanded
+        class="only-border-top"
         @click="handleAction(action)">
         {{ action }}
       </b-button>
@@ -30,15 +31,15 @@
 </template>
 
 <script lang="ts">
-import { Component, mixins, Prop } from 'nuxt-property-decorator'
-import Connector from '@kodadot1/sub-api'
-import exec, { execResultValue, txCb } from '@/utils/transactionExecutor'
+import NFTUtils, { NFTAction } from '@/components/unique/NftUtils'
+import nftById from '@/queries/nftById.graphql'
+import RmrkVersionMixin from '@/utils/mixins/rmrkVersionMixin'
+import UseApiMixin from '@/utils/mixins/useApiMixin'
 import { notificationTypes, showNotification } from '@/utils/notification'
 import { unpin } from '@/utils/proxy'
-import RmrkVersionMixin from '@/utils/mixins/rmrkVersionMixin'
 import shouldUpdate from '@/utils/shouldUpdate'
-import nftById from '@/queries/nftById.graphql'
-import NFTUtils, { NFTAction } from '@/components/unique/NftUtils'
+import exec, { execResultValue, txCb } from '@/utils/transactionExecutor'
+import { Component, mixins, Prop } from 'nuxt-property-decorator'
 
 const ownerActions: NFTAction[] = [
   NFTAction.SEND,
@@ -70,7 +71,10 @@ const components = {
 }
 
 @Component({ components })
-export default class AvailableActions extends mixins(RmrkVersionMixin) {
+export default class AvailableActions extends mixins(
+  RmrkVersionMixin,
+  UseApiMixin
+) {
   @Prop(String) public currentOwnerId!: string
   @Prop(String) public accountId!: string
   @Prop({ type: [String] }) public delegateId!: string
@@ -78,6 +82,7 @@ export default class AvailableActions extends mixins(RmrkVersionMixin) {
   @Prop() public nftId!: string
   @Prop(String) public collectionId!: string
   @Prop(Boolean) public frozen!: boolean
+  @Prop(Boolean) public isOwner!: boolean
   @Prop({ type: Array, default: () => [] }) public ipfsHashes!: string[]
 
   private selectedAction: NFTAction = NFTAction.NONE
@@ -132,20 +137,6 @@ export default class AvailableActions extends mixins(RmrkVersionMixin) {
     )
   }
 
-  get isOwner() {
-    this.$consola.log(
-      '{ currentOwnerId, accountId }',
-      this.currentOwnerId,
-      this.accountId
-    )
-
-    return (
-      this.currentOwnerId &&
-      this.accountId &&
-      this.currentOwnerId === this.accountId
-    )
-  }
-
   get isAvailableToBuy() {
     const { price, accountId } = this
     return accountId && Number(price) > 0
@@ -192,11 +183,11 @@ export default class AvailableActions extends mixins(RmrkVersionMixin) {
   }
 
   protected async submit() {
-    const { api } = Connector.getInstance()
+    const api = await this.useApi()
     this.isLoading = true
 
     try {
-      showNotification(`[${this.selectedAction}] ${this.nftId}`)
+      showNotification(`[${this.selectedAction}] NFT: ${this.nftId}`)
       const action = NFTUtils.apiCall(this.selectedAction)
 
       if (!action || !this.collectionId) {
@@ -311,3 +302,7 @@ export default class AvailableActions extends mixins(RmrkVersionMixin) {
   }
 }
 </script>
+
+<style scoped lang="scss">
+@import '@/styles/border';
+</style>

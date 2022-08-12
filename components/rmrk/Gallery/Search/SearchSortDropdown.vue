@@ -6,9 +6,18 @@
       v-model="selectedAction"
       class="select-dropdown">
       <template #trigger>
-        <b-button type="is-primary" icon-right="caret-down"> Sort by </b-button>
+        <b-button
+          type="is-primary"
+          icon-right="caret-down"
+          data-cy="gallery-sort-by">
+          Sort by
+        </b-button>
       </template>
-      <b-dropdown-item v-for="action in actions" :key="action" :value="action">
+      <b-dropdown-item
+        v-for="action in actions"
+        :key="action"
+        :value="action"
+        :data-cy="$t('sort.' + action)">
         {{ $t('sort.' + action) }}
       </b-dropdown-item>
     </b-dropdown>
@@ -16,27 +25,35 @@
       v-else
       v-model="selectedAction"
       placeholder="Sort by"
-      class="select-dropdown">
+      class="select-dropdown"
+      data-cy="collection-sort-by">
       <option v-for="action in actions" :key="action" :value="action">
-        {{ $t('sort.' + action) }}
+        {{
+          isCollection ? $t('sort.collection.' + action) : $t('sort.' + action)
+        }}
       </option>
     </b-select>
   </b-field>
 </template>
 
 <script lang="ts">
-import { Component, Vue, VModel, Prop } from 'nuxt-property-decorator'
-import { NFT_SORT_CONDITION_LIST } from '@/utils/constants'
+import { Component, mixins, VModel, Prop } from 'nuxt-property-decorator'
+import { NFT_SQUID_SORT_CONDITION_LIST } from '@/utils/constants'
+import PrefixMixin from '@/utils/mixins/prefixMixin'
+
 @Component
-export default class SearchSortDropdown extends Vue {
+export default class SearchSortDropdown extends mixins(PrefixMixin) {
   @VModel({ type: [Array, String] }) selectedAction!: string | string[]
   @Prop(Array) public sortOption?: string[]
   @Prop(Boolean) public multipleSelect!: boolean
-
-  private sort: string[] = NFT_SORT_CONDITION_LIST
+  @Prop({ type: Boolean, default: false }) public isCollection?: boolean
 
   get actions(): string[] {
     return this.sortOption || this.sort
+  }
+
+  get sort(): string[] {
+    return NFT_SQUID_SORT_CONDITION_LIST
   }
 }
 </script>

@@ -3,12 +3,13 @@
     <Loader v-model="isLoading" :status="status" />
     <BaseCollectionForm v-bind.sync="base">
       <template v-slot:footer>
-        <CustomAttributeInput
+        <!-- Hidden as of 11.July.2022 due to lack of convenience #3407 -->
+        <!-- <CustomAttributeInput
           :max="10"
           v-model="attributes"
           class="mb-3"
           visible="collapse.collection.attributes.show"
-          hidden="collapse.collection.attributes.hide" />
+          hidden="collapse.collection.attributes.hide" /> -->
         <b-field>
           <p class="has-text-weight-medium is-size-6 has-text-warning">
             {{ $t('mint.deposit') }}:
@@ -28,7 +29,6 @@
 <script lang="ts">
 import { Attribute } from '@/components/rmrk/types'
 import existingCollectionList from '@/queries/unique/existingCollectionList.graphql'
-import onApiConnect from '@/utils/api/general'
 import formatBalance from '@/utils/formatBalance'
 import { unSanitizeIpfsUrl } from '@kodadot1/minimark'
 import AuthMixin from '@/utils/mixins/authMixin'
@@ -38,7 +38,6 @@ import { pinFileToIPFS, pinJson, PinningKey } from '@/utils/nftStorage'
 import { canSupport } from '@/utils/support'
 import { estimate, Extrinsic } from '@/utils/transactionExecutor'
 import { createMetadata } from '@kodadot1/minimark'
-import Connector from '@kodadot1/sub-api'
 import { Component, mixins } from 'nuxt-property-decorator'
 import { IPFS_KODADOT_IMAGE_PLACEHOLDER } from '@/utils/constants'
 import ChainMixin from '@/utils/mixins/chainMixin'
@@ -46,6 +45,8 @@ import PrefixMixin from '@/utils/mixins/prefixMixin'
 import { getclassDeposit, getMetadataDeposit } from '../apiConstants'
 import { getRandomValues, hasEnoughToken } from '../utils'
 import { uploadDirect } from '@/utils/directUpload'
+import UseApiMixin from '~/utils/mixins/useApiMixin'
+import { onApiConnect } from '@kodadot1/sub-api'
 
 type BaseCollectionType = {
   name: string
@@ -60,8 +61,8 @@ const components = {
   BasicSwitch: () => import('@/components/shared/form/BasicSwitch.vue'),
   SubmitButton: () => import('@/components/base/SubmitButton.vue'),
   Money: () => import('@/components/shared/format/Money.vue'),
-  CustomAttributeInput: () =>
-    import('@/components/rmrk/Create/CustomAttributeInput.vue'),
+  // CustomAttributeInput: () =>
+  //   import('@/components/rmrk/Create/CustomAttributeInput.vue'),
 }
 
 @Component({ components })
@@ -69,7 +70,8 @@ export default class CreateCollection extends mixins(
   MetaTransactionMixin,
   ChainMixin,
   AuthMixin,
-  PrefixMixin
+  PrefixMixin,
+  UseApiMixin
 ) {
   private base: BaseCollectionType = {
     name: '',
@@ -82,9 +84,9 @@ export default class CreateCollection extends mixins(
   protected attributes: Attribute[] = []
 
   public async created() {
-    onApiConnect(() => {
-      const classDeposit = getclassDeposit()
-      const metadataDeposit = getMetadataDeposit()
+    onApiConnect(this.apiUrl, (api) => {
+      const classDeposit = getclassDeposit(api)
+      const metadataDeposit = getMetadataDeposit(api)
       this.collectionDeposit = (classDeposit + metadataDeposit).toString()
     })
   }
@@ -152,8 +154,11 @@ export default class CreateCollection extends mixins(
     return Number(newId)
   }
 
-  protected cretateArgs(randomId: number, metadata: string): Extrinsic[] {
-    const { api } = Connector.getInstance()
+  protected async cretateArgs(
+    randomId: number,
+    metadata: string
+  ): Promise<Extrinsic[]> {
+    const api = await this.useApi()
     const create = api.tx.uniques.create(randomId, this.accountId)
     // Option to freeze metadata
     const meta = api.tx.uniques.setClassMetadata(randomId, metadata, false)
@@ -171,13 +176,13 @@ export default class CreateCollection extends mixins(
     return [create, meta, ...attributes]
   }
 
-  protected tryToEstimateTx(): Promise<string> {
-    const { api } = Connector.getInstance()
+  protected async tryToEstimateTx(): Promise<string> {
+    const api = await this.useApi()
     const cb = api.tx.utility.batchAll
     const metadata =
       'ipfs://ipfs/QmaCWgK91teVsQuwLDt56m2xaUfBCCJLeCsPeJyHEenoES'
     const randomId = 0
-    const args = [this.cretateArgs(randomId, metadata)]
+    const args = [await this.cretateArgs(randomId, metadata)]
     return estimate(this.accountId, cb, args)
   }
 
@@ -210,13 +215,13 @@ export default class CreateCollection extends mixins(
       this.status = 'loader.ipfs'
       const metadata = await this.constructMeta()
       // const metadata = 'ipfs://ipfs/QmaCWgK91teVsQuwLDt56m2xaUfBCCJLeCsPeJyHEenoES'
-      const { api } = Connector.getInstance()
+      const api = await this.useApi()
       const cb = api.tx.utility.batchAll
       const randomId = await this.generateNewCollectionId()
 
       const args = [
-        this.cretateArgs(randomId, metadata),
-        ...(await canSupport(this.hasSupport)),
+        await this.cretateArgs(randomId, metadata),
+        ...(await canSupport(api, this.hasSupport)),
       ]
 
       if (this.base.file) {

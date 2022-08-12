@@ -145,42 +145,11 @@
 </template>
 
 <script lang="ts">
-import { Component, mixins, Watch } from 'nuxt-property-decorator'
-import { MediaType } from '../types'
-import { emptyObject } from '@/utils/empty'
-import Support from '@/components/shared/Support.vue'
-import Connector from '@kodadot1/sub-api'
-import exec, {
-  execResultValue,
-  txCb,
-  estimate,
-} from '@/utils/transactionExecutor'
-import { notificationTypes, showNotification } from '@/utils/notification'
-import SubscribeMixin from '@/utils/mixins/subscribeMixin'
-import RmrkVersionMixin from '@/utils/mixins/rmrkVersionMixin'
 import {
-  SimpleNFT,
-  NFTMetadata,
-  NFT,
-  getNftId,
-  Collection,
-} from '../service/scheme'
-import {
-  unSanitizeIpfsUrl,
-  createInteraction,
-  Attribute,
-  Interaction,
-} from '@kodadot1/minimark'
-import { formatBalance } from '@polkadot/util'
-import { generateId } from '@/components/rmrk/service/Consolidator'
-import { canSupport, feeTx } from '@/utils/support'
-import { resolveMedia } from '../utils'
-import NFTUtils, { MintType } from '../service/NftUtils'
-import { DispatchError } from '@polkadot/types/interfaces'
-import TransactionMixin from '@/utils/mixins/txMixin'
-import { encodeAddress, isAddress } from '@polkadot/util-crypto'
-import ChainMixin from '@/utils/mixins/chainMixin'
-import correctFormat from '@/utils/ss58Format'
+  sendFunction,
+  shuffleFunction,
+  toDistribute,
+} from '@/components/accounts/utils'
 import {
   isFileWithoutType,
   isSecondFileVisible,
@@ -188,21 +157,49 @@ import {
   offsetAttribute,
   secondaryFileVisible,
 } from '@/components/rmrk/Create/mintUtils'
-import {
-  sendFunction,
-  shuffleFunction,
-  toDistribute,
-} from '@/components/accounts/utils'
-import { PinningKey, pinFileToIPFS, pinJson } from '@/utils/nftStorage'
-import { uploadDirect } from '@/utils/directUpload'
+import { generateId } from '@/components/rmrk/service/Consolidator'
+import Support from '@/components/shared/Support.vue'
+import collectionList from '@/queries/subsquid/rmrk/usedCollectionSymbolsByAccount.graphql'
 import {
   DETAIL_TIMEOUT,
   IPFS_KODADOT_IMAGE_PLACEHOLDER,
-} from '~/utils/constants'
-import { createMetadata, findUniqueSymbol } from '@kodadot1/minimark'
+} from '@/utils/constants'
+import { uploadDirect } from '@/utils/directUpload'
+import { emptyObject } from '@/utils/empty'
+import ChainMixin from '@/utils/mixins/chainMixin'
+import PrefixMixin from '@/utils/mixins/prefixMixin'
+import RmrkVersionMixin from '@/utils/mixins/rmrkVersionMixin'
+import SubscribeMixin from '@/utils/mixins/subscribeMixin'
+import TransactionMixin from '@/utils/mixins/txMixin'
+import UseApiMixin from '@/utils/mixins/useApiMixin'
+import { pinFileToIPFS, pinJson, PinningKey } from '@/utils/nftStorage'
+import { notificationTypes, showNotification } from '@/utils/notification'
+import correctFormat from '@/utils/ss58Format'
+import { canSupport, feeTx } from '@/utils/support'
+import exec, {
+  estimate,
+  execResultValue,
+  txCb,
+} from '@/utils/transactionExecutor'
+import {
+  Attribute,
+  createInteraction,
+  createMetadata,
+  findUniqueSymbol,
+  Interaction,
+  mapAsSystemRemark,
+  unSanitizeIpfsUrl,
+} from '@kodadot1/minimark'
+import { DispatchError } from '@polkadot/types/interfaces'
+import { formatBalance } from '@polkadot/util'
+import { encodeAddress, isAddress } from '@polkadot/util-crypto'
+import { Component, mixins, Watch } from 'nuxt-property-decorator'
 import Vue from 'vue'
-import PrefixMixin from '~/utils/mixins/prefixMixin'
-import collectionList from '@/queries/collectionListByAccount.graphql'
+import { unwrapSafe } from '@/utils/uniquery'
+import NFTUtils, { MintType } from '../service/NftUtils'
+import { getNftId, NFT, NFTMetadata, SimpleNFT } from '../service/scheme'
+import { MediaType } from '../types'
+import { resolveMedia } from '../utils'
 
 const components = {
   Auth: () => import('@/components/shared/Auth.vue'),
@@ -229,7 +226,8 @@ export default class SimpleMint extends mixins(
   RmrkVersionMixin,
   TransactionMixin,
   ChainMixin,
-  PrefixMixin
+  PrefixMixin,
+  UseApiMixin
 ) {
   private rmrkMint: SimpleNFT = {
     ...emptyObject<SimpleNFT>(),
@@ -250,7 +248,7 @@ export default class SimpleMint extends mixins(
   protected random = false
   protected distribution = 100
   protected first = 100
-  protected collections: Collection[] = []
+  protected usedCollectionSymbols: string[] = []
 
   layout() {
     return 'centered-half-layout'
@@ -260,7 +258,7 @@ export default class SimpleMint extends mixins(
   public async created() {
     this.$apollo.addSmartQuery('collections', {
       query: collectionList,
-      client: this.urlPrefix,
+      client: this.client,
       manual: true,
       loadingKey: 'isLoading',
       result: this.handleResult,
@@ -278,7 +276,9 @@ export default class SimpleMint extends mixins(
   public handleResult(data: any) {
     const collectionEntities = data?.data?.collectionEntities
     if (collectionEntities) {
-      this.collections = collectionEntities.nodes
+      this.usedCollectionSymbols = unwrapSafe(collectionEntities).map(
+        ({ symbol }) => symbol
+      )
     }
   }
 
@@ -287,22 +287,17 @@ export default class SimpleMint extends mixins(
     if (!this.rmrkMint?.symbol && this.rmrkMint.name?.length) {
       const symbol = this.generateSymbolCore(
         this.rmrkMint.name,
-        this.collections
+        this.usedCollectionSymbols
       )
       Vue.set(this.rmrkMint, 'symbol', symbol)
     }
   }
 
   // core: to generate symbol
-  private generateSymbolCore(name: string, collections: Collection[]): string {
+  private generateSymbolCore(name: string, usedSymbols: string[]): string {
     let symbol = name.replaceAll(' ', '_')
-    const usedSymbols = collections.map((collection) => {
-      // collection.id is like xxxx-symbolName
-      const splitArray = collection.id.split('-')
-      return splitArray.length > 1 ? splitArray[1] : ''
-    })
     symbol = findUniqueSymbol(symbol, usedSymbols)
-    return symbol.slice(0, 10) // symbol's length have to smaller than 10
+    return symbol.slice(0, 10).toUpperCase() // symbol's length have to smaller than 10
   }
 
   protected updateMeta(value: number): void {
@@ -366,7 +361,9 @@ export default class SimpleMint extends mixins(
 
   protected async estimateTx() {
     const { accountId, version } = this
-    const { api } = Connector.getInstance()
+    const api = await this.useApi()
+
+    const toRemark = mapAsSystemRemark(api)
 
     const result = NFTUtils.generateRemarks(this.rmrkMint, accountId, version)
     const cb = api.tx.utility.batchAll
@@ -378,10 +375,10 @@ export default class SimpleMint extends mixins(
         ]
 
     const args = !this.hasSupport
-      ? remarks.map(this.toRemark)
+      ? remarks.map(toRemark)
       : [
-          ...remarks.map(this.toRemark),
-          ...(await canSupport(this.hasSupport, 3)),
+          ...remarks.map(toRemark),
+          ...(await canSupport(api, this.hasSupport, 3)),
         ]
 
     this.estimated = await estimate(this.accountId, cb, [args])
@@ -435,7 +432,8 @@ export default class SimpleMint extends mixins(
     this.isLoading = true
     this.status = 'loader.ipfs'
     const { accountId, version } = this
-    const { api } = Connector.getInstance()
+    const api = await this.useApi()
+    const toRemark = mapAsSystemRemark(api)
 
     try {
       const meta = await this.constructMeta()
@@ -460,10 +458,10 @@ export default class SimpleMint extends mixins(
           ]
 
       const args = !this.hasSupport
-        ? remarks.map(this.toRemark)
+        ? remarks.map(toRemark)
         : [
-            ...remarks.map(this.toRemark),
-            ...(await canSupport(this.hasSupport, 3)),
+            ...remarks.map(toRemark),
+            ...(await canSupport(api, this.hasSupport, 3)),
           ]
 
       const tx = await exec(
@@ -511,7 +509,7 @@ export default class SimpleMint extends mixins(
   }
 
   public async fetchRandomSeed(): Promise<number[]> {
-    const { api } = Connector.getInstance()
+    const api = await this.useApi()
     const random = await api.query.babe.randomness()
     return Array.from(random)
   }
@@ -537,7 +535,8 @@ export default class SimpleMint extends mixins(
         return
       }
 
-      const { api } = Connector.getInstance()
+      const api = await this.useApi()
+      const toRemark = mapAsSystemRemark(api)
       const outOfTheNamesForTheRemarks = sendFunction(
         addresses,
         this.distribution,
@@ -564,11 +563,11 @@ export default class SimpleMint extends mixins(
 
       const cb = api.tx.utility.batchAll
       const args = [...outOfTheNamesForTheRemarks, ...restOfTheRemarks].map(
-        this.toRemark
+        toRemark
       )
 
       const estimatedFee = await estimate(this.accountId, cb, [args])
-      const support = feeTx(estimatedFee)
+      const support = feeTx(api, estimatedFee)
       args.push(support)
 
       const tx = await exec(
@@ -614,8 +613,8 @@ export default class SimpleMint extends mixins(
     }
   }
 
-  protected onTxError(dispatchError: DispatchError): void {
-    const { api } = Connector.getInstance()
+  protected async onTxError(dispatchError: DispatchError): Promise<void> {
+    const api = await this.useApi()
     if (dispatchError.isModule) {
       const decoded = api.registry.findMetaError(dispatchError.asModule)
       const { docs, name, section } = decoded
@@ -631,18 +630,6 @@ export default class SimpleMint extends mixins(
     }
 
     this.isLoading = false
-  }
-
-  get chainProperties() {
-    return this.$store.getters['chain/getChainProperties']
-  }
-
-  get decimals(): number {
-    return this.chainProperties.tokenDecimals
-  }
-
-  get unit(): string {
-    return this.chainProperties.tokenSymbol
   }
 
   public async listForSale(remarks: NFT[], originalBlockNumber: string) {
@@ -668,10 +655,11 @@ export default class SimpleMint extends mixins(
       }
 
       this.isLoading = true
-      const { api } = Connector.getInstance()
+      const api = await this.useApi()
+      const toRemark = mapAsSystemRemark(api)
 
       const cb = api.tx.utility.batchAll
-      const args = onlyNfts.map(this.toRemark)
+      const args = onlyNfts.map(toRemark)
 
       const tx = await exec(
         this.accountId,
@@ -778,11 +766,6 @@ export default class SimpleMint extends mixins(
       uploadDirect(file, metaHash).catch(this.$consola.warn)
     }
     return unSanitizeIpfsUrl(metaHash)
-  }
-
-  private toRemark(remark: string) {
-    const { api } = Connector.getInstance()
-    return api.tx.system.remark(remark)
   }
 
   protected navigateToDetail(nft: NFT, blockNumber: string) {

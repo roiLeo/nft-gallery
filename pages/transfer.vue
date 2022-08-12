@@ -3,7 +3,7 @@
     <Loader v-model="isLoading" :status="status" />
     <nuxt-link
       v-if="$route.query.target"
-      :to="`/rmrk/u/${destinationAddress}`"
+      :to="`/${this.urlPrefix}/u/${correctAddress}`"
       class="linkartist">
       <b-icon icon="chevron-left" size="is-small" class="linkartist--icon" />
       Go to artist's profile
@@ -18,7 +18,9 @@
       <b-field>
         <Auth />
       </b-field>
-      <div v-if="$route.query.target" class="box--target-info">
+      <div
+        v-if="$route.query.target && this.hasBlockExplorer"
+        class="box--target-info">
         Your donation will be sent to:
         <a
           :href="`https://kusama.subscan.io/account/${$route.query.target}`"
@@ -75,7 +77,7 @@
           {{ $t('general.submit') }}
         </b-button>
         <b-button
-          v-if="transactionValue"
+          v-if="transactionValue && this.hasBlockExplorer"
           type="is-success"
           class="tx"
           icon-left="external-link-alt"
@@ -85,7 +87,7 @@
           }}{{ '...' }}
         </b-button>
         <b-button
-          v-if="transactionValue"
+          v-if="transactionValue && this.hasBlockExplorer"
           @click="toast('URL copied to clipboard')"
           v-clipboard:copy="getUrl()"
           type="is-primary">
@@ -131,19 +133,22 @@
 </template>
 
 <script lang="ts">
-import { Component, mixins, Watch } from 'nuxt-property-decorator'
-import Connector from '@kodadot1/sub-api'
-import exec, { execResultValue, txCb } from '@/utils/transactionExecutor'
-import { notificationTypes, showNotification } from '@/utils/notification'
-import TransactionMixin from '@/utils/mixins/txMixin'
+import { calculateKsmFromUsd, calculateUsdFromKsm } from '@/utils/calculation'
+import { urlBuilderTransaction } from '@/utils/explorerGuide'
+import { calculateBalance } from '@/utils/formatBalance'
 import AuthMixin from '@/utils/mixins/authMixin'
 import ChainMixin from '@/utils/mixins/chainMixin'
-import { DispatchError } from '@polkadot/types/interfaces'
-import { calculateBalance } from '@/utils/formatBalance'
+import PrefixMixin from '@/utils/mixins/prefixMixin'
+import TransactionMixin from '@/utils/mixins/txMixin'
+import UseApiMixin from '@/utils/mixins/useApiMixin'
+import { notificationTypes, showNotification } from '@/utils/notification'
 import correctFormat from '@/utils/ss58Format'
+import exec, { execResultValue, txCb } from '@/utils/transactionExecutor'
+import Connector, { onApiConnect } from '@kodadot1/sub-api'
+import { DispatchError } from '@polkadot/types/interfaces'
 import { encodeAddress, isAddress } from '@polkadot/util-crypto'
-import { urlBuilderTransaction } from '@/utils/explorerGuide'
-import { calculateUsdFromKsm, calculateKsmFromUsd } from '@/utils/calculation'
+import { Component, mixins, Watch } from 'nuxt-property-decorator'
+import { hasExplorer } from '~/components/rmrk/Profile/utils'
 
 @Component({
   components: {
@@ -161,7 +166,9 @@ import { calculateUsdFromKsm, calculateKsmFromUsd } from '@/utils/calculation'
 export default class Transfer extends mixins(
   TransactionMixin,
   AuthMixin,
-  ChainMixin
+  ChainMixin,
+  PrefixMixin,
+  UseApiMixin
 ) {
   protected destinationAddress = ''
   protected transactionValue = ''
@@ -200,6 +207,10 @@ export default class Transfer extends mixins(
     return this.unit === 'KSM'
   }
 
+  get hasBlockExplorer(): boolean {
+    return hasExplorer(this.urlPrefix)
+  }
+
   get balance(): string {
     return this.$store.getters.getAuthBalance
   }
@@ -207,6 +218,9 @@ export default class Transfer extends mixins(
   protected created() {
     this.$store.dispatch('fiat/fetchFiatPrice')
     this.checkQueryParams()
+    onApiConnect(this.apiUrl, async (api) => {
+      this.$store.commit('setApiConnected', api.isConnected)
+    })
   }
 
   protected onAmountFieldChange() {
@@ -265,7 +279,7 @@ export default class Transfer extends mixins(
     this.initTransactionLoader()
 
     try {
-      const { api } = Connector.getInstance()
+      const api = await this.useApi()
       const cb = api.tx.balances.transfer
       const arg = [
         this.destinationAddress,
@@ -334,8 +348,8 @@ export default class Transfer extends mixins(
     }
   }
 
-  protected onTxError(dispatchError: DispatchError): void {
-    const { api } = Connector.getInstance()
+  protected async onTxError(dispatchError: DispatchError): Promise<void> {
+    const api = await this.useApi()
     if (dispatchError.isModule) {
       const decoded = api.registry.findMetaError(dispatchError.asModule)
       const { docs, name, section } = decoded

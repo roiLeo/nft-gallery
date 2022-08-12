@@ -1,6 +1,4 @@
-import { Prefix } from './indexer.config'
-
-type Config<T = boolean> = Record<Prefix, T>
+import { Prefix, Config } from './types'
 
 const hasCreate: Config<boolean> = {
   rmrk: true,

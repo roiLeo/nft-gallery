@@ -6,7 +6,9 @@
     :mimeType="mimeType"
     :description="meta.description"
     :imageVisible="imageVisible"
-    :isLoading="isLoading">
+    :isLoading="isLoading"
+    @mouseEntered="showNavigation = true"
+    @mouseLeft="showNavigation = false">
     <template v-slot:top v-if="message">
       <b-message class="message-box" type="is-primary">
         <div class="columns">
@@ -17,15 +19,22 @@
             </p>
           </div>
           <div class="column">
-            <Sharing onlyCopyLink />
+            <Sharing :enableDownload="isOwner" />
           </div>
         </div>
       </b-message>
     </template>
+    <template v-slot:image>
+      <Navigation
+        v-if="nftsFromSameCollection.length > 1"
+        :showNavigation="showNavigation"
+        :items="nftsFromSameCollection"
+        :currentId="nft.id" />
+    </template>
     <template v-slot:main>
       <div class="columns">
         <div class="column is-6">
-          <div class="nft-title">
+          <div class="mb-5">
             <Name :nft="nft" :isLoading="isLoading" />
           </div>
 
@@ -34,6 +43,7 @@
             <VueMarkdown
               v-if="!isLoading"
               class="is-size-5"
+              :style="{ wordBreak: 'break-word' }"
               :source="meta.description.replaceAll('\n', '  \n')" />
             <b-skeleton
               :count="3"
@@ -69,8 +79,16 @@
                       </div>
                       <div class="price-block__container">
                         <div class="price-block__original">
-                          <Money :value="nft.price" inline />
+                          <Money :value="nft.price" inline data-cy="money" />
                         </div>
+                        <b-button
+                          v-if="nft.currentOwner === accountId"
+                          class="ml-2 only-border-top"
+                          type="is-warning"
+                          outlined
+                          @click="handleUnlist">
+                          {{ $t('Unlist') }}
+                        </b-button>
                       </div>
                       <div v-if="nftRoyalties">
                         ⊆ {{ $t('royalty') }}
@@ -82,6 +100,7 @@
                         <AvailableActions
                           ref="actions"
                           :account-id="accountId"
+                          :is-owner="isOwner"
                           :current-owner-id="nft.currentOwner"
                           :price="nft.price"
                           :nftId="id"
@@ -89,6 +108,7 @@
                           :collectionId="collectionId"
                           :frozen="nft.isFrozen"
                           :isMakeOffersAllowed="isMakeOffersAllowed"
+                          :isBuyAllowed="isBuyAllowed"
                           :ipfs-hashes="[
                             nft.image,
                             nft.animation_url,
@@ -98,7 +118,8 @@
                         <Auth class="mt-4" />
                       </p>
                     </div>
-                    <Sharing class="mb-4" />
+                    <AccountBalance />
+                    <Sharing :enableDownload="isOwner" class="mb-4" />
                   </div>
                 </div>
               </template>
@@ -116,39 +137,71 @@
         :current-owner-id="nft.currentOwner"
         :nftId="id"
         @offersUpdate="offersUpdate"
-        :collectionId="collectionId" />
+        :collectionId="collectionId"
+        data-cy="offer-list" />
+      <History :events="events" :openOnDefault="false" data-cy="history" />
     </template>
   </BaseGalleryItem>
 </template>
 
 <script lang="ts">
-import { Emote, NFT, NFTMetadata } from '@/components/rmrk/service/scheme'
+import {
+  Emote,
+  Interaction,
+  NFT,
+  NFTMetadata,
+} from '@/components/rmrk/service/scheme'
 import {
   fetchNFTMetadata,
   getSanitizer,
   sanitizeIpfsUrl,
 } from '@/components/rmrk/utils'
 import { createTokenId, tokenIdToRoute } from '@/components/unique/utils'
+import itemEvents from '@/queries/subsquid/bsx/itemEvents.graphql'
+import { isOwner } from '@/utils/account'
 import { toHuman, unwrapOrDefault, unwrapOrNull } from '@/utils/api/format'
-import onApiConnect from '@/utils/api/general'
 import Orientation from '@/utils/directives/DeviceOrientation'
 import { emptyObject } from '@/utils/empty'
+import { formatBsxBalanceEmptyOnZero } from '@/utils/format/balance'
+import { processMedia } from '@/utils/gallery/media'
 import isShareMode from '@/utils/isShareMode'
+import ApiUrlMixin from '@/utils/mixins/apiUrlMixin'
+import AuthMixin from '@/utils/mixins/authMixin'
+import PrefixMixin from '@/utils/mixins/prefixMixin'
 import SubscribeMixin from '@/utils/mixins/subscribeMixin'
 import { notificationTypes, showNotification } from '@/utils/notification'
+import resolveQueryPath from '@/utils/queryPathResolver'
+import { royaltyOf } from '@/utils/royalty'
+import { generateNftImage } from '@/utils/seoImageGenerator'
+import { ShoppingActions } from '@/utils/shoppingActions'
+import { isEmpty } from '@kodadot1/minimark'
+import { onApiConnect } from '@kodadot1/sub-api'
 import { Option, u128 } from '@polkadot/types'
 import { InstanceDetails } from '@polkadot/types/interfaces'
 import { get, set } from 'idb-keyval'
 import { Component, mixins, Vue } from 'nuxt-property-decorator'
-import { processMedia } from '@/utils/gallery/media'
-import AuthMixin from '~/utils/mixins/authMixin'
-import PrefixMixin from '~/utils/mixins/prefixMixin'
-import resolveQueryPath from '~/utils/queryPathResolver'
 import { getMetadata, getOwner, getPrice, hasAllPallets } from './utils'
-import { isEmpty } from '@kodadot1/minimark'
-import { royaltyOf } from '@/utils/royalty'
+import AvailableActions from './AvailableActions.vue'
+import nftListIdsByCollection from '@/queries/subsquid/general/nftIdListByCollection.graphql'
+import { unwrapSafe } from '@/utils/uniquery'
+import { mapToId } from '@/utils/mappers'
 
 @Component<GalleryItem>({
+  name: 'GalleryItem',
+  head() {
+    const metaData = {
+      mime: this.mimeType,
+      title: this.pageTitle,
+      description: this.meta.description,
+      url: this.$route.path,
+      image: this.image,
+      video: this.meta.animation_url,
+    }
+    return {
+      title: this.pageTitle,
+      meta: [...this.$seoMeta(metaData)],
+    }
+  },
   components: {
     Auth: () => import('@/components/shared/Auth.vue'),
     AvailableActions: () => import('./AvailableActions.vue'),
@@ -163,7 +216,10 @@ import { royaltyOf } from '@/utils/royalty'
     BaseGalleryItem: () =>
       import('@/components/shared/gallery/BaseGalleryItem.vue'),
     Money: () => import('@/components/shared/format/Money.vue'),
+    AccountBalance: () => import('@/components/shared/AccountBalance.vue'),
     OfferList: () => import('@/components/bsx/Offer/OfferList.vue'),
+    History: () => import('@/components/rmrk/Gallery/History.vue'),
+    Navigation: () => import('@/components/rmrk/Gallery/Item/Navigation.vue'),
   },
   directives: {
     orientation: Orientation,
@@ -172,7 +228,8 @@ import { royaltyOf } from '@/utils/royalty'
 export default class GalleryItem extends mixins(
   SubscribeMixin,
   PrefixMixin,
-  AuthMixin
+  AuthMixin,
+  ApiUrlMixin
 ) {
   private id = ''
   private collectionId = ''
@@ -182,13 +239,18 @@ export default class GalleryItem extends mixins(
   public mimeType = ''
   public meta: NFTMetadata = emptyObject<NFTMetadata>()
   public emotes: Emote[] = []
+  public events: Interaction[] = []
   public message = ''
   public isMakeOffersAllowed = true
+  public showNavigation = false
+  private nftsFromSameCollection: string[] = []
 
   public async created() {
     this.checkId()
     await this.fetchNftData()
-    onApiConnect((api) => {
+    await this.fetchEvents()
+    this.fetchCollectionItems()
+    onApiConnect(this.apiUrl, (api) => {
       if (hasAllPallets(api)) {
         this.subscribe(getOwner(api), this.tokenId, this.observeOwner)
         this.subscribe(getPrice(api), this.tokenId, this.observePrice)
@@ -196,8 +258,29 @@ export default class GalleryItem extends mixins(
     })
   }
 
+  get isOwner(): boolean {
+    return isOwner(this.nft.currentOwner, this.accountId)
+  }
+
+  get balance(): string {
+    return this.$store.getters.getAuthBalance
+  }
+
   get tokenId(): [string, string] {
     return [this.collectionId, this.id]
+  }
+
+  get pageTitle(): string {
+    return this.nft?.name || ''
+  }
+
+  get image(): string {
+    return generateNftImage(
+      this.nft.name,
+      formatBsxBalanceEmptyOnZero(this.nft.price as string),
+      this.meta.image as string,
+      this.mimeType
+    )
   }
 
   public offersUpdate({ offers }) {
@@ -217,7 +300,63 @@ export default class GalleryItem extends mixins(
     this.$set(this.nft, 'price', unwrapOrDefault(data).toString())
   }
 
-  private async fetchNftData() {
+  public async fetchCollectionItems() {
+    const collectionId = this.nft?.collection?.id
+    if (collectionId) {
+      // cancel request and get ids from store in case we already fetched collection data before
+      if (this.$store.state.history?.currentCollection?.id === collectionId) {
+        this.nftsFromSameCollection =
+          this.$store.state.history.currentCollection?.nftIds || []
+        return
+      }
+      try {
+        const nfts = await this.$apollo.query({
+          query: nftListIdsByCollection,
+          client: this.client,
+          variables: {
+            id: collectionId,
+          },
+        })
+
+        const {
+          data: { nftEntities },
+        } = nfts
+
+        this.nftsFromSameCollection = unwrapSafe(nftEntities).map(mapToId) || []
+        this.$store.dispatch('history/setCurrentCollection', {
+          id: collectionId,
+          nftIds: this.nftsFromSameCollection,
+          prefix: this.urlPrefix,
+        })
+      } catch (e) {
+        showNotification(`${e}`, notificationTypes.warn)
+      }
+    }
+  }
+
+  private async fetchEvents() {
+    this.$apollo.addSmartQuery('eventsManualFetch', {
+      client: this.urlPrefix,
+      query: itemEvents,
+      variables: () => ({
+        id: createTokenId(this.collectionId, this.id),
+      }),
+      manual: true,
+      fetchPolicy: 'network-only',
+      result: ({ data }) => {
+        if (data && data.events) {
+          this.events = [...data.events]
+        }
+      },
+    })
+  }
+
+  protected handleUnlist() {
+    const availableActions = this.$refs.actions as AvailableActions
+    availableActions.unlistNft()
+  }
+
+  private async fetchNftData(retryCount = 0) {
     const query = await resolveQueryPath(this.urlPrefix, 'nftById')
     const nft = await this.$apollo.query({
       query: query.default,
@@ -225,6 +364,7 @@ export default class GalleryItem extends mixins(
       variables: {
         id: createTokenId(this.collectionId, this.id),
       },
+      fetchPolicy: 'no-cache',
     })
     const {
       data: { nftEntity },
@@ -233,7 +373,12 @@ export default class GalleryItem extends mixins(
     if (!nftEntity) {
       this.$consola.warn(`No NFT with ID ${this.id} fallback to RPC Node`)
       this.fetchRPCMetadata()
-      // showNotification(`No NFT with ID ${this.id}`, notificationTypes.warn)
+
+      if (retryCount < 3) {
+        this.$consola.log(`Retrying fetching NFT data ${retryCount}`)
+        this.fetchNftData(retryCount + 1)
+      }
+
       return
     }
 
@@ -254,7 +399,7 @@ export default class GalleryItem extends mixins(
   }
 
   protected fetchRPCMetadata() {
-    onApiConnect(async (api) => {
+    onApiConnect(this.apiUrl, async (api) => {
       const metacall = getMetadata(api)
       const res = await metacall(this.collectionId, this.id).then((option) =>
         unwrapOrNull(option as Option<any>)
@@ -340,10 +485,48 @@ export default class GalleryItem extends mixins(
     return !isShareMode
   }
 
-  protected handleAction(deleted: boolean) {
+  // @Watch('meta', { deep: true })
+  // handleNFTPopulationFinished(newVal) {
+  //   if (newVal) {
+  //     // save visited detail page to history
+  //     this.$store.dispatch('history/addHistoryItem', {
+  //       id: this.id,
+  //       name: this.nft.name,
+  //       image: this.meta.image,
+  //       collection: (this.nft.collection as any).name,
+  //       date: new Date(),
+  //       description: this.meta.description,
+  //       author: this.nft.currentOwner,
+  //       price: this.nft.price,
+  //       mimeType: this.mimeType,
+  //       prefix: this.urlPrefix,
+  //     })
+  //   }
+  // }
+
+  get isBuyAllowed(): boolean {
+    if (!this.nft.price) {
+      return false
+    }
+    return parseFloat(this.balance) > parseFloat(this.nft.price)
+  }
+
+  protected handleAction(action: ShoppingActions) {
+    const deleted = action === ShoppingActions.CONSUME
     if (deleted) {
       showNotification('INSTANCE REMOVED', notificationTypes.warn)
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+    } else {
+      setTimeout(() => {
+        // wait for events updating
+        this.fetchEvents()
+      }, 5000)
     }
   }
 }
 </script>
+<style scoped lang="scss">
+@import '@/styles/border';
+</style>

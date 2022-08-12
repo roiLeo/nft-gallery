@@ -1,28 +1,33 @@
 <template>
   <div>
     <Loader v-model="isLoading" :status="status" />
-    <BaseCollectionForm v-bind.sync="base">
+    <BaseCollectionForm ref="collectionForm" v-bind.sync="base">
       <template v-slot:main>
         <b-field class="mb-5" />
       </template>
       <template v-slot:footer>
-        <CustomAttributeInput
+        <!-- Hidden as of 11.July.2022 due to lack of convenience #3407 -->
+        <!-- <CustomAttributeInput
           :max="10"
           v-model="attributes"
           class="mb-3"
           visible="collapse.collection.attributes.show"
-          hidden="collapse.collection.attributes.hide" />
+          hidden="collapse.collection.attributes.hide" /> -->
         <b-field>
           <p class="has-text-weight-medium is-size-6 has-text-warning">
             {{ $t('mint.deposit') }}:
             <Money :value="collectionDeposit" inline />
           </p>
         </b-field>
-        <SubmitButton
-          label="create collection"
-          :disabled="disabled"
-          :loading="isLoading"
-          @click="submit" />
+        <b-field>
+          <AccountBalance />
+        </b-field>
+        <b-field type="is-danger" :message="balanceNotEnoughMessage">
+          <SubmitButton
+            label="create collection"
+            :loading="isLoading"
+            @click="submit" />
+        </b-field>
       </template>
     </BaseCollectionForm>
   </div>
@@ -35,7 +40,6 @@ import {
   getMetadataDeposit,
 } from '@/components/unique/apiConstants'
 import { getRandomValues, hasEnoughToken } from '@/components/unique/utils'
-import onApiConnect from '@/utils/api/general'
 import { uploadDirect } from '@/utils/directUpload'
 import formatBalance from '@/utils/formatBalance'
 import { mapToId } from '@/utils/mappers'
@@ -43,6 +47,7 @@ import AuthMixin from '@/utils/mixins/authMixin'
 import ChainMixin from '@/utils/mixins/chainMixin'
 import MetaTransactionMixin from '@/utils/mixins/metaMixin'
 import PrefixMixin from '@/utils/mixins/prefixMixin'
+import ApiUrlMixin from '@/utils/mixins/apiUrlMixin'
 import { notificationTypes, showNotification } from '@/utils/notification'
 import { pinJson, PinningKey } from '@/utils/nftStorage'
 import resolveQueryPath from '@/utils/queryPathResolver'
@@ -50,8 +55,8 @@ import { getImageTypeSafe, pinImageSafe } from '@/utils/safePin'
 import { estimate } from '@/utils/transactionExecutor'
 import { unwrapSafe } from '@/utils/uniquery'
 import { createMetadata, unSanitizeIpfsUrl } from '@kodadot1/minimark'
-import Connector from '@kodadot1/sub-api'
-import { Component, mixins } from 'nuxt-property-decorator'
+import { Component, mixins, Ref } from 'nuxt-property-decorator'
+import { ApiFactory, onApiConnect } from '@kodadot1/sub-api'
 import { dummyIpfsCid } from '@/utils/ipfs'
 
 type BaseCollectionType = {
@@ -67,8 +72,9 @@ const components = {
   BasicSwitch: () => import('@/components/shared/form/BasicSwitch.vue'),
   SubmitButton: () => import('@/components/base/SubmitButton.vue'),
   Money: () => import('@/components/shared/format/Money.vue'),
-  CustomAttributeInput: () =>
-    import('@/components/rmrk/Create/CustomAttributeInput.vue'),
+  AccountBalance: () => import('@/components/shared/AccountBalance.vue'),
+  // CustomAttributeInput: () =>
+  //   import('@/components/rmrk/Create/CustomAttributeInput.vue'),
 }
 
 @Component({ components })
@@ -76,36 +82,37 @@ export default class CreateCollection extends mixins(
   MetaTransactionMixin,
   ChainMixin,
   AuthMixin,
-  PrefixMixin
+  PrefixMixin,
+  ApiUrlMixin
 ) {
   private base: BaseCollectionType = {
     name: '',
     file: null,
     description: '',
   }
-  private hasSupport = true
   protected collectionDeposit = ''
   protected id = '0'
   protected attributes: Attribute[] = []
+  protected balanceNotEnough = false
+  @Ref('collectionForm') readonly collectionForm
+
+  public checkValidity() {
+    return this.collectionForm.checkValidity()
+  }
+
+  get balanceNotEnoughMessage() {
+    if (this.balanceNotEnough) {
+      return this.$t('tooltip.notEnoughBalance')
+    }
+    return ''
+  }
 
   public async created() {
-    onApiConnect(() => {
-      const classDeposit = getclassDeposit()
-      const metadataDeposit = getMetadataDeposit()
+    onApiConnect(this.apiUrl, (api) => {
+      const classDeposit = getclassDeposit(api)
+      const metadataDeposit = getMetadataDeposit(api)
       this.collectionDeposit = (classDeposit + metadataDeposit).toString()
     })
-  }
-
-  get disabled(): boolean {
-    const {
-      base: { name },
-      accountId,
-    } = this
-    return !(name && accountId)
-  }
-
-  get balance(): string {
-    return this.$store.getters.getAuthBalance
   }
 
   public async constructMeta() {
@@ -167,8 +174,8 @@ export default class CreateCollection extends mixins(
     return [randomId, { Marketplace: null }, metadata]
   }
 
-  protected tryToEstimateTx(): Promise<string> {
-    const { api } = Connector.getInstance()
+  protected async tryToEstimateTx(): Promise<string> {
+    const api = await ApiFactory.useApiInstance(this.apiUrl)
     const cb = api.tx.utility.batchAll
     const metadata = dummyIpfsCid()
     const randomId = 0
@@ -193,6 +200,18 @@ export default class CreateCollection extends mixins(
   }
 
   protected async submit(): Promise<void> {
+    // check fields
+    if (!this.checkValidity()) {
+      return
+    }
+    // check balance
+    if (
+      !!this.collectionDeposit &&
+      parseFloat(this.balance) < parseFloat(this.collectionDeposit)
+    ) {
+      this.balanceNotEnough = true
+      return
+    }
     this.isLoading = true
     this.status = 'loader.checkBalance'
 
@@ -205,7 +224,7 @@ export default class CreateCollection extends mixins(
       this.status = 'loader.ipfs'
       const metadata = await this.constructMeta()
       // const metadata = 'ipfs://ipfs/QmaCWgK91teVsQuwLDt56m2xaUfBCCJLeCsPeJyHEenoES'
-      const { api } = Connector.getInstance()
+      const api = await ApiFactory.useApiInstance(this.apiUrl)
       const cb = api.tx.nft.createClass
       const randomId = await this.generateNewCollectionId()
 

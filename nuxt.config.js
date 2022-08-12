@@ -286,6 +286,7 @@ export default defineNuxtConfig({
       '@polkadot/ui-settings',
       '@polkadot/hw-ledger',
       '@polkadot/types-codec',
+      '@polkadot/wasm-bridge',
       '@google/model-viewer', // TODO check to see if it works without transpilation in future nuxt releases
     ],
     extend(config) {
@@ -293,6 +294,12 @@ export default defineNuxtConfig({
       config.module.rules.push({
         test: /\.md$/,
         use: 'raw-loader',
+      })
+
+      config.module.rules.push({
+        test: /node_modules\/@substrate\/smoldot-light\/dist\/mjs\/.+\.js$/,
+        loader: require.resolve('babel-loader'),
+        query: { compact: true },
       })
 
       config.module.rules.push({
@@ -315,6 +322,7 @@ export default defineNuxtConfig({
     prefix: process.env.URL_PREFIX || 'rmrk',
     baseUrl: process.env.BASE_URL || 'http://localhost:9090',
     googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID || '',
+    dev: process.env.NODE_ENV === 'development',
   },
   // In case of using ssr
   // privateRuntimeConfig: {}

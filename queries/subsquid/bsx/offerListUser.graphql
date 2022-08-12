@@ -1,0 +1,19 @@
+query offerListUser($id: String!, $burned: Boolean) {
+  offers(
+    orderBy: createdAt_DESC
+    where: { caller_eq: $id, nft: { burned_eq: $burned } }
+  ) {
+    blockNumber
+    caller
+    createdAt
+    expiration
+    id
+    price
+    status
+    updatedAt
+    nft {
+      name
+      id
+    }
+  }
+}

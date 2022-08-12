@@ -4,6 +4,7 @@
       <Sort
         class="control"
         :value="sortBy"
+        :isCollection="true"
         @input="updateSortBy"
         :sortOption="sortOption" />
       <div
@@ -142,17 +143,17 @@ export default class CollectionSearchBar extends mixins(KeyboardEventsMixin) {
   @Emit('update:listed')
   @Debounce(50)
   updateListed(value: string | boolean): boolean {
-    const v = String(value)
-    this.replaceUrl(v, 'listed')
-    return v === 'true'
+    const queryValue = String(value) === 'true'
+    this.replaceUrl(queryValue, 'listed')
+    return queryValue
   }
 
   @Emit('update:owned')
   @Debounce(50)
   updateOwned(value: string | boolean): boolean {
-    const v = value ? String(value) : ''
-    this.replaceUrl(v, 'owned')
-    return Boolean(v)
+    const queryValue = value ? String(value) : ''
+    this.replaceUrl(queryValue, 'owned')
+    return Boolean(queryValue)
   }
 
   @Emit('update:type')
@@ -165,6 +166,11 @@ export default class CollectionSearchBar extends mixins(KeyboardEventsMixin) {
   @Emit('update:sortBy')
   @Debounce(400)
   updateSortBy(value: string): string {
+    const listed = Boolean(value?.toLowerCase().indexOf('price') > -1)
+    if (listed && !this.vListed) {
+      this.vListed = true
+    }
+
     this.replaceUrl(value, 'sort')
     return value
   }
@@ -177,14 +183,14 @@ export default class CollectionSearchBar extends mixins(KeyboardEventsMixin) {
   }
 
   @Debounce(100)
-  replaceUrl(value: string, key = 'search'): void {
+  replaceUrl(value: boolean | string, key = 'search'): void {
     this.$router
       .replace({
         path: String(this.$route.path),
         query: {
           ...this.$route.query,
           search: this.searchQuery || undefined,
-          [key]: value,
+          [key]: value ? String(value) : undefined,
         },
       })
       .catch(this.$consola.warn /*Navigation Duplicate err fix later */)

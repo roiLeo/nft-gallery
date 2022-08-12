@@ -4,8 +4,9 @@
     <b-tabs v-model="activeTab" destroy-on-hide expanded>
       <b-tab-item v-for="x in components" :key="x" :label="x">
         <component
+          :showExplainerText="showExplainerText"
           :is="x"
-          @navigateToCreateNftTab="switchToCreateNFT"
+          @navigateToCreateNftTab="switchToNft"
           v-if="components[activeTab] === x" />
       </b-tab-item>
     </b-tabs>
@@ -37,9 +38,23 @@ const components = { Collection, NFT }
     }
     return {
       title,
+      link: [
+        {
+          hid: 'canonical',
+          rel: 'canonical',
+          href: this.$root.$config.baseUrl + this.$route.path,
+        },
+      ],
       meta: [...this.$seoMeta(metaData)],
     }
   },
 })
-export default class BsxCreatePage extends mixins(CreateMixin) {}
+export default class BsxCreatePage extends mixins(CreateMixin) {
+  public showExplainerText = false
+
+  protected switchToNft() {
+    this.switchToCreateNFT()
+    this.showExplainerText = true
+  }
+}
 </script>

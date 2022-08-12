@@ -31,18 +31,21 @@
         </div>
       </div>
 
-      <!-- <div v-if="id" class="column is-6-tablet is-7-desktop is-8-widescreen">
+      <div
+        v-if="id && urlPrefix === 'rmrk'"
+        class="column is-6-tablet is-7-desktop is-8-widescreen">
         <CollectionActivity :id="id" />
-      </div> -->
+      </div>
 
       <div class="column has-text-right">
         <Sharing
           v-if="sharingVisible"
           class="mb-2"
           :label="name"
-          :iframe="iframeSettings">
+          :iframe="iframeSettings"
+          data-cy="share-button">
           <DestroyCollection v-if="isOwner && urlPrefix === 'bsx'" :id="id" />
-          <DonationButton :address="issuer" />
+          <DonationButton :address="issuer" data-cy="donation-button" />
         </Sharing>
       </div>
     </div>
@@ -67,7 +70,7 @@
           v-bind.sync="searchQuery"
           :showOwnerSwitch="!!accountId"
           :disableToggle="!totalListed"
-          :sortOption="collectionProfileSortOption">
+          :sortOption="squidCollectionProfileSortOption">
           <Layout class="mr-5" />
           <b-field>
             <Pagination
@@ -98,7 +101,8 @@
         <ScrollTopButton />
       </b-tab-item>
       <b-tab-item label="Chart" value="chart">
-        <CollectionPriceChart :priceData="priceData" />
+        <BsxCollectionPriceChart v-if="isBsx" />
+        <CollectionPriceChart v-else :priceData="priceData" />
       </b-tab-item>
       <b-tab-item label="History" value="history">
         <History
@@ -123,6 +127,9 @@
           openOnDefault
           hideCollapse />
       </b-tab-item>
+      <b-tab-item label="Offers" value="offers" v-if="isBsx">
+        <CollectionOffers :collectionId="id" />
+      </b-tab-item>
     </b-tabs>
   </section>
 </template>
@@ -132,7 +139,6 @@ import { exist } from '@/components/rmrk/Gallery/Search/exist'
 import { NFT } from '@/components/rmrk/service/scheme'
 import allCollectionSaleEvents from '@/queries/rmrk/subsquid/allCollectionSaleEvents.graphql'
 import collectionChartById from '@/queries/rmrk/subsquid/collectionChartById.graphql'
-import collectionById from '@/queries/collectionById.graphql'
 import { getCloudflareImageLinks } from '@/utils/cachingStrategy'
 import { CollectionChartData as ChartData } from '@/utils/chart'
 import { emptyObject } from '@/utils/empty'
@@ -147,7 +153,7 @@ import { notificationTypes, showNotification } from '@/utils/notification'
 import resolveQueryPath from '@/utils/queryPathResolver'
 import shouldUpdate from '@/utils/shouldUpdate'
 import { sortedEventByDate } from '@/utils/sorting'
-import { correctPrefix, ifRMRK, unwrapSafe } from '@/utils/uniquery'
+import { correctPrefix, unwrapSafe } from '@/utils/uniquery'
 import { Component, mixins, Ref, Watch } from 'nuxt-property-decorator'
 import { Debounce } from 'vue-debounce-decorator'
 import { CollectionWithMeta, Interaction } from '../service/scheme'
@@ -174,7 +180,7 @@ const components = {
   DonationButton: () => import('@/components/transfer/DonationButton.vue'),
   Layout: () => import('@/components/rmrk/Gallery/Layout.vue'),
   CollectionPriceChart: () =>
-    import('@/components/rmrk/Gallery/CollectionPriceChart.vue'),
+    import('@/components/shared/collection/PriceChart.vue'),
   BasicImage: () => import('@/components/shared/view/BasicImage.vue'),
   DescriptionWrapper: () =>
     import('@/components/shared/collapse/DescriptionWrapper.vue'),
@@ -186,6 +192,9 @@ const components = {
   ScrollTopButton: () => import('@/components/shared/ScrollTopButton.vue'),
   DestroyCollection: () =>
     import('@/components/bsx/specific/DestroyCollection.vue'),
+  CollectionOffers: () => import('@/components/bsx/Offer/CollectionOffers.vue'),
+  BsxCollectionPriceChart: () =>
+    import('@/components/bsx/Collection/ChartContainer.vue'),
 }
 @Component<CollectionItem>({
   components,
@@ -201,41 +210,41 @@ export default class CollectionItem extends mixins(
   private id = ''
   private collection: CollectionWithMeta = emptyObject<CollectionWithMeta>()
   public meta: CollectionMetadata = emptyObject<CollectionMetadata>()
-  private searchQuery: SearchQuery = Object.assign(
-    {
-      search: '',
-      type: '',
-      sortBy: (this.$route.query.sort as string) ?? 'BLOCK_NUMBER_DESC',
-      listed: false,
-      owned: false,
-    },
-    this.$route.query
-  )
+  private searchQuery: SearchQuery = {
+    search: this.$route.query?.search?.toString() ?? '',
+    type: this.$route.query?.type?.toString() ?? '',
+    sortBy: this.$route.query?.sort?.toString() ?? '',
+    listed: this.$route.query?.listed?.toString() === 'true',
+    owned: false,
+  }
+
   public activeTab = 'items'
+  protected isLoading = true
   protected first = 16
   protected totalListed = 0
   protected stats: NFT[] = []
   protected priceData: [ChartData[], ChartData[]] | [] = []
-  private queryLoading = 0
   public eventsOfNftCollection: Interaction[] | [] = []
   public ownerEventsOfNftCollection: Interaction[] | [] = []
   public selectedEvent = 'all'
   public priceChartData: [Date, number][][] = []
   private openHistory = true
   private openHolder = true
-  private isLoading = true
   private nfts: NFT[] = []
 
-  collectionProfileSortOption: string[] = [
-    'EMOTES_COUNT_DESC',
-    'BLOCK_NUMBER_DESC',
-    'BLOCK_NUMBER_ASC',
-    'UPDATED_AT_DESC',
-    'UPDATED_AT_ASC',
-    'PRICE_DESC',
-    'PRICE_ASC',
-    'SN_ASC',
+  protected squidCollectionProfileSortOption: string[] = [
+    'blockNumber_DESC',
+    'blockNumber_ASC',
+    'updatedAt_DESC',
+    'updatedAt_ASC',
+    'price_DESC',
+    'price_ASC',
+    'sn_ASC',
   ]
+
+  get isBsx(): boolean {
+    return this.urlPrefix === 'bsx'
+  }
 
   get hasChartData(): boolean {
     return this.priceData.length > 0
@@ -297,21 +306,15 @@ export default class CollectionItem extends mixins(
     const params: any[] = []
 
     if (this.searchQuery.search) {
-      params.push({
-        name: { likeInsensitive: `%${this.searchQuery.search}%` },
-      })
+      params.push({ name_containsInsensitive: this.searchQuery.search })
     }
 
     if (this.searchQuery.listed || checkForEmpty) {
-      params.push({
-        price: { greaterThan: '0' },
-      })
+      params.push({ price_gt: '0' })
     }
 
     if (this.searchQuery.owned && this.accountId) {
-      params.push({
-        currentOwner: { equalTo: this.accountId },
-      })
+      params.push({ currentOwner_eq: this.accountId })
     }
 
     return params
@@ -321,7 +324,17 @@ export default class CollectionItem extends mixins(
     this.checkId()
     this.checkActiveTab()
     this.checkIfEmptyListed()
+    this.checkSortBy()
     this.fetchPageData(this.startPage)
+  }
+
+  private checkSortBy() {
+    const currentSortBy = this.searchQuery.sortBy
+    const newSortBy = 'blockNumber_DESC'
+
+    if (!currentSortBy && newSortBy !== currentSortBy) {
+      this.searchQuery.sortBy = newSortBy
+    }
   }
 
   public async fetchPageData(page: number, loadDirection = 'down') {
@@ -329,18 +342,13 @@ export default class CollectionItem extends mixins(
       return false
     }
     this.isFetchingData = true
-    const query = await resolveQueryPath(this.urlPrefix, 'collectionById')
+    const query = await resolveQueryPath(this.client, 'collectionById')
     const result = await this.$apollo.query({
       query: query.default,
-      client: this.urlPrefix,
+      client: this.client,
       variables: {
         id: this.id,
-        // orderBy: 'blockNumber_DESC',
-        orderBy: ifRMRK(
-          this.urlPrefix,
-          this.searchQuery.sortBy,
-          'blockNumber_DESC'
-        ),
+        orderBy: this.searchQuery.sortBy,
         search: this.buildSearchParam(),
         first: this.first,
         offset: (page - 1) * this.first,
@@ -471,7 +479,7 @@ export default class CollectionItem extends mixins(
     { data }: any,
     loadDirection = 'down'
   ): Promise<void> {
-    const { collectionEntity } = data
+    const { collectionEntity, nftEntitiesConnection } = data
     if (!collectionEntity) {
       return this.$nuxt.error({
         statusCode: 404,
@@ -498,7 +506,8 @@ export default class CollectionItem extends mixins(
     } else {
       this.nfts = this.nfts.concat(newNfts)
     }
-    this.total = collectionEntity.nfts.totalCount
+    this.total =
+      collectionEntity.nfts.totalCount || nftEntitiesConnection.totalCount
     this.isLoading = false
 
     await this.fetchMetadata()
@@ -517,6 +526,7 @@ export default class CollectionItem extends mixins(
         image: this.image,
         description: this.description,
         numberOfItems: this.total || 0,
+        prefix: this.urlPrefix,
       })
     }
   }
@@ -547,7 +557,9 @@ export default class CollectionItem extends mixins(
 
   @Watch('searchQuery', { deep: true })
   protected onSearchQueryChange() {
-    this.resetPage()
+    if (!this.isLoading) {
+      this.resetPage()
+    }
   }
 
   @Watch('activeTab')

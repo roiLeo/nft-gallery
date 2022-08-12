@@ -18,7 +18,7 @@
             </p>
           </div>
           <div class="column">
-            <Sharing onlyCopyLink />
+            <Sharing :enableDownload="isOwner" />
           </div>
         </div>
       </b-message>
@@ -68,11 +68,12 @@
                     </div>
                     <div class="price-block__container">
                       <div class="price-block__original">
-                        <Money :value="nft.price" inline />
+                        <Money :value="nft.price" inline data-cy="money" />
                       </div>
                       <b-button
                         v-if="nft.currentOwner === accountId"
                         type="is-warning"
+                        class="only-border-top"
                         outlined
                         @click="handleUnlist">
                         {{ $t('Unlist') }}
@@ -86,6 +87,7 @@
                         <AvailableActions
                           ref="actions"
                           :current-owner-id="nft.currentOwner"
+                          :is-owner="isOwner"
                           :price="nft.price"
                           :originialOwner="nft.issuer"
                           :nft-id="nft.id"
@@ -99,13 +101,10 @@
                       </IndexerGuard>
                       <Auth />
                     </p>
-                    <p class="subtitle is-size-6" v-if="accountId">
-                      <span>{{ $t('general.balance') }}: </span>
-                      <Money :value="balance" inline />
-                    </p>
+                    <AccountBalance />
                   </div>
 
-                  <Sharing class="mb-4" />
+                  <Sharing :enableDownload="isOwner" class="mb-4" />
                 </div>
               </div>
             </div>
@@ -130,7 +129,8 @@
             v-if="!isLoading"
             :events="nft.events"
             :open-on-default="!compactGalleryItem"
-            @setPriceChartData="setPriceChartData" />
+            @setPriceChartData="setPriceChartData"
+            data-cy="history" />
         </div>
       </div>
     </template>
@@ -148,18 +148,21 @@ import { generateNftImage } from '@/utils/seoImageGenerator'
 import { formatBalanceEmptyOnZero } from '@/utils/format/balance'
 
 import isShareMode from '@/utils/isShareMode'
-import nftById from '@/queries/nftById.graphql'
-import nftByIdMini from '@/queries/nftByIdMinimal.graphql'
-import nftListIdsByCollection from '@/queries/nftIdListByCollection.graphql'
+import nftById from '@/queries/subsquid/rmrk/nftById.graphql'
+import nftListIdsByCollection from '@/queries/subsquid/general/nftIdListByCollection.graphql'
 import nftByIdMinimal from '@/queries/rmrk/subsquid/nftByIdMinimal.graphql'
+import eventListByNftId from '@/queries/subsquid/general/eventListByNftId.graphql'
 
 import { fetchNFTMetadata } from '../utils'
 import { get, set } from 'idb-keyval'
 import { exist } from './Search/exist'
 import Orientation from '@/utils/directives/DeviceOrientation'
-import PrefixMixin from '~/utils/mixins/prefixMixin'
+import PrefixMixin from '@/utils/mixins/prefixMixin'
 import { Debounce } from 'vue-debounce-decorator'
 import AvailableActions from './AvailableActions.vue'
+import { isOwner } from '@/utils/account'
+import { unwrapSafe } from '@/utils/uniquery'
+import { mapToId } from '@/utils/mappers'
 
 @Component<GalleryItem>({
   name: 'GalleryItem',
@@ -174,6 +177,13 @@ import AvailableActions from './AvailableActions.vue'
     }
     return {
       title: this.pageTitle,
+      link: [
+        {
+          hid: 'canonical',
+          rel: 'canonical',
+          href: this.$root.$config.baseUrl + this.$route.path,
+        },
+      ],
       meta: [...this.$seoMeta(metaData)],
     }
   },
@@ -182,6 +192,7 @@ import AvailableActions from './AvailableActions.vue'
     AvailableActions,
     Facts: () => import('@/components/rmrk/Gallery/Item/Facts.vue'),
     Money: () => import('@/components/shared/format/Money.vue'),
+    AccountBalance: () => import('@/components/shared/AccountBalance.vue'),
     Name: () => import('@/components/rmrk/Gallery/Item/Name.vue'),
     Navigation: () => import('@/components/rmrk/Gallery/Item/Navigation.vue'),
     Sharing: () => import('@/components/rmrk/Gallery/Item/Sharing.vue'),
@@ -201,7 +212,7 @@ import AvailableActions from './AvailableActions.vue'
 })
 export default class GalleryItem extends mixins(PrefixMixin) {
   private nft: NFT = emptyObject<NFT>()
-  private nftsFromSameCollection: NFT[] = []
+  private nftsFromSameCollection: string[] = []
   private imageVisible = true
   public isLoading = true
   public mimeType = ''
@@ -235,9 +246,9 @@ export default class GalleryItem extends mixins(PrefixMixin) {
   async fetch() {
     try {
       const {
-        data: { nFTEntity },
+        data: { nftEntity: nFTEntity },
       } = await this.$apollo.query({
-        client: this.urlPrefix,
+        client: this.client,
         query: nftById,
         variables: {
           id: this.id,
@@ -246,7 +257,7 @@ export default class GalleryItem extends mixins(PrefixMixin) {
 
       this.nft = {
         ...nFTEntity,
-        emotes: nFTEntity?.emotes?.nodes,
+        emotes: unwrapSafe(nFTEntity?.emotes),
       }
 
       this.fetchMetadata()
@@ -267,8 +278,8 @@ export default class GalleryItem extends mixins(PrefixMixin) {
   public mounted() {
     // used to poll nft every second after component initialization in order to prevent double spending
     this.$apollo.addSmartQuery<{ nft }>('nft', {
-      client: this.urlPrefix,
-      query: nftByIdMini,
+      client: this.client,
+      query: nftByIdMinimal,
       manual: true,
       variables: {
         id: this.id,
@@ -291,24 +302,28 @@ export default class GalleryItem extends mixins(PrefixMixin) {
     this.priceChartData = data
   }
 
+  get isOwner(): boolean {
+    return isOwner(this.nft.currentOwner, this.accountId)
+  }
+
   @Debounce(500)
   private async updateEventList() {
-    const { data } = await this.$apollo.query<{ nft }>({
-      client: 'subsquid',
-      query: nftByIdMinimal,
+    const { data } = await this.$apollo.query<{ events: any[] }>({
+      client: this.client,
+      query: eventListByNftId,
       variables: {
         id: this.id,
       },
     })
     this.nft.events =
-      data.nft?.events.map((e) => ({
+      data.events?.map((e) => ({
         ...e,
         nft: { id: this.id },
       })) ?? []
   }
 
   public async fetchCollectionItems() {
-    const collectionId = this.nft?.collectionId
+    const collectionId = this.nft?.collection.id
     if (collectionId) {
       // cancel request and get ids from store in case we already fetched collection data before
       if (this.$store.state.history?.currentCollection?.id === collectionId) {
@@ -319,7 +334,7 @@ export default class GalleryItem extends mixins(PrefixMixin) {
       try {
         const nfts = await this.$apollo.query({
           query: nftListIdsByCollection,
-          client: this.urlPrefix,
+          client: this.client,
           variables: {
             id: collectionId,
           },
@@ -329,11 +344,11 @@ export default class GalleryItem extends mixins(PrefixMixin) {
           data: { nftEntities },
         } = nfts
 
-        this.nftsFromSameCollection =
-          nftEntities?.nodes.map((n: { id: string }) => n.id) || []
+        this.nftsFromSameCollection = unwrapSafe(nftEntities).map(mapToId) || []
         this.$store.dispatch('history/setCurrentCollection', {
           id: collectionId,
           nftIds: this.nftsFromSameCollection,
+          prefix: this.urlPrefix,
         })
       } catch (e) {
         showNotification(`${e}`, notificationTypes.warn)
@@ -435,6 +450,7 @@ export default class GalleryItem extends mixins(PrefixMixin) {
         author: this.nft.currentOwner,
         price: this.nft.price,
         mimeType: this.mimeType,
+        prefix: this.urlPrefix,
       })
     }
   }
@@ -447,3 +463,6 @@ export default class GalleryItem extends mixins(PrefixMixin) {
   }
 }
 </script>
+<style scoped lang="scss">
+@import '@/styles/border';
+</style>
