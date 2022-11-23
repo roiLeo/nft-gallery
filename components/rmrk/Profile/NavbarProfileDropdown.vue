@@ -204,13 +204,18 @@
         <div class="buttons is-justify-content-space-between my-2">
           <ConnectWalletButton
             label="general.change_account"
-            class="navbar__sign-out-button menu-item is-size-7"
+            :has-change-account-btn="true"
             @closeBurgerMenu="closeBurgerMenu" />
-          <b-button
+
+          <NeoButton
+            :label="$t('profileMenu.disconnect')"
+            @click.native="disconnect()" />
+
+          <!-- <b-button
             class="navbar__sign-out-button menu-item is-size-7"
             @click="disconnect()">
             {{ $t('profileMenu.disconnect') }}
-          </b-button>
+          </b-button> -->
         </div>
       </b-dropdown-item>
     </b-dropdown>
@@ -272,6 +277,7 @@
 <script lang="ts">
 import { Component, Prop, Ref, mixins } from 'nuxt-property-decorator'
 import { RampInstantSDK } from '@ramp-network/ramp-instant-sdk'
+import { NeoButton } from '@kodadot1/brick'
 
 import Avatar from '@/components/shared/Avatar.vue'
 import PrefixMixin from '@/utils/mixins/prefixMixin'
@@ -289,6 +295,7 @@ const components = {
   SimpleAccountBalance: () =>
     import('@/components/shared/SimpleAccountBalance.vue'),
   ColorModeButton: () => import('@/components/common/ColorModeButton.vue'),
+  NeoButton,
 }
 
 @Component({ components })

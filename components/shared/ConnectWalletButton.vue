@@ -1,16 +1,29 @@
 <template>
-  <b-button type="is-primary" @click="toggleWalletConnectModal">
-    {{ $t(label) }}
-  </b-button>
+  <div>
+    <div v-if="hasChangeAccountBtn">
+      <NeoButton :label="$t(label)" @click.native="toggleWalletConnectModal" />
+    </div>
+    <div v-else>
+      <b-button type="is-primary" @click="toggleWalletConnectModal">
+        {{ $t(label) }}
+      </b-button>
+    </div>
+  </div>
 </template>
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'nuxt-property-decorator'
 import WalletModal from '~/components/common/WalletModal.vue'
+import { NeoButton } from '@kodadot1/brick'
 
-@Component({})
+@Component({
+  components: {
+    NeoButton,
+  },
+})
 export default class ConnectWalletButton extends Vue {
   @Prop({ default: 'general.connect' }) public label!: string // i18
+  @Prop({ default: false }) public hasChangeAccountBtn!: boolean
   private modal: { close: () => void; isActive?: boolean } | null = null
 
   public toggleWalletConnectModal(): void {
