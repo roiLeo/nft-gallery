@@ -55,7 +55,6 @@
 import { Component, mixins } from 'nuxt-property-decorator'
 import { getChainTestList } from '~/utils/constants'
 import PrefixMixin from '@/utils/mixins/prefixMixin'
-
 import AuthMixin from '~~/utils/mixins/authMixin'
 
 @Component({})

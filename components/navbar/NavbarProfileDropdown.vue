@@ -364,7 +364,7 @@ export default class NavbarProfileDropdown extends mixins(
     }).show()
   }
 
-  protected closeBurgerMenu(): void {
+  public closeBurgerMenu(): void {
     this.$emit('closeBurgerMenu')
   }
 }

@@ -166,7 +166,7 @@ import { get } from 'idb-keyval'
 
 import BasicImage from '@/components/shared/view/BasicImage.vue'
 import Identity from '@/components/identity/IdentityIndex.vue'
-import NavbarProfileDropdown from '@/components/rmrk/Profile/NavbarProfileDropdown.vue'
+import NavbarProfileDropdown from '~~/components/navbar/NavbarProfileDropdown.vue'
 import Search from '@/components/search/Search.vue'
 import NavbarExplore from '@/components/navbar/NavbarExplore.vue'
 import KodaBetaDark from '@/assets/Koda_Beta_dark.svg'
@@ -192,12 +192,11 @@ export default class NavbarMenu extends mixins(
   AuthMixin,
   ExperimentMixin
 ) {
-  protected showTopNavbar = true
-  private isGallery: boolean = this.$route.path.includes('tab=GALLERY')
+  public showTopNavbar = true
   private fixedTitleNavAppearDistance = 200
   private lastScrollPosition = 0
   private artistName = ''
-  private isBurgerMenuOpened = false
+  public isBurgerMenuOpened = false
   @Ref('mobilSearchRef') readonly mobilSearchRef
 
   get isRmrk(): boolean {
