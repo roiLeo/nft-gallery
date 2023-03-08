@@ -29,6 +29,20 @@ export type ActionList = {
   errorMessage?: string
 }
 
+export type ActionMintToken = {
+  interaction: Interaction.MINTNFT
+  urlPrefix: string
+  metadata: string
+  price?: string
+  collectionId: string
+  royalty?: {
+    address: string
+    amount: number
+  }
+  successMessage?: string
+  errorMessage?: string
+}
+
 export type ActionSend = {
   interaction: Interaction.SEND
   urlPrefix: string
