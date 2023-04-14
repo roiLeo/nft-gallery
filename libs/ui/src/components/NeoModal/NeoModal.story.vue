@@ -1,6 +1,7 @@
 <template>
-  <Story title="NeoNftCard">
-    <Variant title="Nft Card">
+  <Story title="NeoModal">
+    <Variant title="Modal">
+      <button @click="modalActive = !modalActive">Toggle modal</button>
       <NeoModal v-model="modalActive" @close="modalActive = false">
         Modal Content
       </NeoModal>
@@ -11,5 +12,5 @@
 <script lang="ts" setup>
 import NeoModal from './NeoModal.vue'
 
-const modalActive = ref(true)
+const modalActive = true
 </script>

@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { IdentityItem, MediaItem, NeoIcon } from '@kodadot1/brick'
+import { MediaItem, NeoIcon } from '@kodadot1/brick'
 
 import { useGalleryItem } from './useGalleryItem'
 
