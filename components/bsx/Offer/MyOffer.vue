@@ -14,8 +14,8 @@
       </option>
     </b-select>
     <Loader v-model="isLoading" :status="status" />
-    <b-table :data="displayOffers(offers)">
-      <b-table-column
+    <NeoTable :data="displayOffers(offers)">
+      <NeoTableColumn
         v-slot="props"
         cell-class="is-vcentered is-narrow"
         :label="$t('nft.offer.item')"
@@ -27,16 +27,16 @@
             {{ props.row.nft.name ? props.row.nft.name : props.row.nft.id }}
           </p>
         </nuxt-link>
-      </b-table-column>
-      <b-table-column
+      </NeoTableColumn>
+      <NeoTableColumn
         v-slot="props"
         cell-class="is-vcentered is-narrow"
         field="formatPrice"
         :label="$t('myOffer.price')"
         sortable>
         <Money :value="props.row.price" inline />
-      </b-table-column>
-      <b-table-column
+      </NeoTableColumn>
+      <NeoTableColumn
         v-slot="props"
         cell-class="is-vcentered is-narrow"
         field="caller"
@@ -45,35 +45,35 @@
         <nuxt-link :to="`/${urlPrefix}/u/${props.row.caller}`">
           <Identity :address="props.row.caller" />
         </nuxt-link>
-      </b-table-column>
-      <b-table-column
+      </NeoTableColumn>
+      <NeoTableColumn
         v-slot="props"
         cell-class="is-vcentered is-narrow"
         field="expirationBlock"
         :label="$t('offer.expiration')"
         sortable>
         {{ calcExpirationTime(props.row.expiration) }}
-      </b-table-column>
-      <b-table-column
+      </NeoTableColumn>
+      <NeoTableColumn
         v-slot="props"
         cell-class="is-vcentered is-narrow"
         :label="$t('offer.action')"
         width="120"
         sortable>
-        <b-button
+        <NeoButton
           v-if="props.row.caller === accountId"
-          type="is-orange"
-          outlined
+          variant="orange"
+          no-shadow
           icon-left="times"
-          @click="onClick(props.row, true)" />
-        <b-button
+          @click.native="onClick(props.row, true)" />
+        <NeoButton
           v-else
-          type="is-success"
-          outlined
+          variant="success"
+          no-shadow
           icon-left="money-bill"
-          @click="onClick(props.row, false)" />
-      </b-table-column>
-      <b-table-column
+          @click.native="onClick(props.row, false)" />
+      </NeoTableColumn>
+      <NeoTableColumn
         v-slot="props"
         field="createdAt"
         cell-class="is-vcentered is-narrow"
@@ -84,14 +84,14 @@
             new Date(props.row.createdAt) |
               formatDistanceToNow({ addSuffix: true })
           }}
-        </p></b-table-column
+        </p></NeoTableColumn
       >
       <template #empty>
         <div class="has-text-centered">
           {{ $t(isLogIn ? 'myOffer.empty' : 'myOffer.needLogin') }}
         </div>
       </template>
-    </b-table>
+    </NeoTable>
   </div>
 </template>
 
@@ -107,10 +107,14 @@ import PrefixMixin from '@/utils/mixins/prefixMixin'
 import acceptableOfferByCurrentOwner from '@/queries/subsquid/bsx/acceptableOfferByCurrentOwner.graphql'
 
 import { Offer, OfferResponse } from './types'
+import { NeoButton, NeoTable, NeoTableColumn } from '@kodadot1/brick'
 
 const components = {
   Identity: () => import('@/components/identity/IdentityIndex.vue'),
   Money: () => import('@/components/shared/format/Money.vue'),
+  NeoButton,
+  NeoTable,
+  NeoTableColumn,
 }
 
 @Component({
