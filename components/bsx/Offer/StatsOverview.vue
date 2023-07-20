@@ -39,9 +39,9 @@
 <script lang="ts">
 import { Component, mixins } from 'nuxt-property-decorator'
 import { OfferStats, StatsResponse } from './types'
-import PrefixMixin from '~/utils/mixins/prefixMixin'
-import { countOf } from '~/utils/countOf'
-import statsForBsx from '~/queries/subsquid/bsx/statsForBsx.graphql'
+import PrefixMixin from '@/utils/mixins/prefixMixin'
+import { countOf } from '@/utils/countOf'
+import statsForBsx from '@/queries/subsquid/bsx/statsForBsx.graphql'
 
 const components = {
   Identity: () => import('@/components/identity/IdentityIndex.vue'),
